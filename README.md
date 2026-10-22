@@ -25,7 +25,7 @@ docker compose up -d mongo   # MongoDB 7 como replica set
 npm run dev                     # api en :3000 y web en :5173
 ```
 
-Abre http://localhost:5173. La pantalla debe decir "API: conectada".
+Abre http://localhost:5173, crea tu cuenta y tu equipo, y empieza a armar playbooks.
 
 ## Comandos
 
