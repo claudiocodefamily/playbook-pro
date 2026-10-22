@@ -66,6 +66,18 @@ export const playsApi = {
       method: 'POST',
       ...json(input),
     }),
+  update: (
+    teamId: string,
+    playId: string,
+    input: {
+      version: number;
+      name?: string;
+      tags?: string[];
+      diagram?: PlayDiagram;
+      formationId?: string | null;
+      saveVersion?: boolean;
+    },
+  ) => api.request<Play>(`/teams/${teamId}/plays/${playId}`, { method: 'PATCH', ...json(input) }),
   duplicate: (teamId: string, playId: string, input: { name?: string; playbookId?: string } = {}) =>
     api.request<Play>(`/teams/${teamId}/plays/${playId}/duplicate`, {
       method: 'POST',

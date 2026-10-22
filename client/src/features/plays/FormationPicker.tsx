@@ -20,11 +20,20 @@ interface FormationPickerProps {
   side: PlaybookSide;
   ruleset: Ruleset;
   value: string | null;
-  onChange: (formationId: string | null) => void;
+  onChange: (formationId: string | null, formation: Formation | null) => void;
+  /** Texto de la opción sin formación. */
+  emptyLabel?: string;
 }
 
 /** Elige la formación de partida viendo cómo queda en la cancha; o empieza con la cancha vacía. */
-export function FormationPicker({ teamId, side, ruleset, value, onChange }: FormationPickerProps) {
+export function FormationPicker({
+  teamId,
+  side,
+  ruleset,
+  value,
+  onChange,
+  emptyLabel = 'Cancha vacía',
+}: FormationPickerProps) {
   const formations = useQuery(queries.formations(teamId, side));
 
   if (formations.isPending) return <PageSpinner label="Cargando formaciones…" />;
@@ -41,7 +50,7 @@ export function FormationPicker({ teamId, side, ruleset, value, onChange }: Form
             type="button"
             role="radio"
             aria-checked={selected}
-            onClick={() => onChange(id)}
+            onClick={() => onChange(id, formation)}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.03 }}
@@ -67,7 +76,7 @@ export function FormationPicker({ teamId, side, ruleset, value, onChange }: Form
               </div>
             )}
             <span className="px-1 text-sm font-semibold">
-              {formation ? formation.name : 'Cancha vacía'}
+              {formation ? formation.name : emptyLabel}
               {formation && !formation.isGlobal && (
                 <span className="ml-1 text-xs font-normal text-slate-500">(del equipo)</span>
               )}
