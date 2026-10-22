@@ -12,6 +12,7 @@ import {
 } from '../field/geometry';
 import { ballAt, ballFlights, snapSpot } from '../field/ball';
 import { animatedPositions, type CoverageAssignment, isCoverage } from '../field/coverage';
+import { sampleTrails, trailsAt } from '../field/trails';
 import { chainEnd, isPathAssignment, pathOrigins, type PathAssignment } from '../field/paths';
 import {
   addManCoverage,
@@ -62,13 +63,15 @@ interface FieldCanvasProps {
   window: FieldWindow;
   /** Segundo de la animación que se está mostrando, o null si no se reproduce. */
   playbackTime: number | null;
+  /** Dibuja por dónde ha pasado cada jugador durante la animación. */
+  showTrails: boolean;
 }
 
 /**
  * La cancha interactiva. Con la herramienta "Mover" se arrastran jugadores; con las de
  * dibujo se arrastra desde un jugador para trazar su ruta, bloqueo, motion o blitz.
  */
-export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps) {
+export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: FieldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const width = useContainerWidth(containerRef);
   const diagram = useEditor((state) => state.diagram);
@@ -102,6 +105,12 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
   const positions = playbackTime === null ? null : animatedPositions(diagram, playbackTime);
   const positionOf = (player: DiagramPlayer): Point => positions?.get(player.id) ?? player;
   const flights = useMemo(() => ballFlights(diagram), [diagram]);
+  // Las muestras de la estela se calculan una vez por jugada, no en cada fotograma.
+  const samples = useMemo(() => (showTrails ? sampleTrails(diagram) : null), [diagram, showTrails]);
+  const trails =
+    samples && positions && playbackTime !== null
+      ? trailsAt(samples, playbackTime, positions)
+      : null;
   const hasOffense = diagram.players.some((player) => player.side === 'O');
   const ball =
     playbackTime === null
@@ -339,6 +348,29 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
               />
             )}
           </Layer>
+
+          {trails && (
+            <Layer listening={false}>
+              {diagram.players.map((player) => {
+                const trail = trails.get(player.id);
+                if (!trail) return null;
+                return (
+                  <Line
+                    key={player.id}
+                    points={trail.flatMap((point) => {
+                      const { x, y } = px(point);
+                      return [x, y];
+                    })}
+                    stroke={player.side === 'O' ? COLORS.offense : COLORS.defense}
+                    strokeWidth={Math.max(3, 0.35 * scale)}
+                    opacity={0.45}
+                    lineCap="round"
+                    lineJoin="round"
+                  />
+                );
+              })}
+            </Layer>
+          )}
 
           <Layer>
             {diagram.players.map((player) => (
