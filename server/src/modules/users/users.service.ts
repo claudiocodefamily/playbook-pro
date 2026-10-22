@@ -40,6 +40,14 @@ export class UsersService {
     return this.userModel.findById(id).exec();
   }
 
+  findByIds(ids: string[]): Promise<UserDocument[]> {
+    return this.userModel.find({ _id: { $in: ids } }).exec();
+  }
+
+  findByEmail(email: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ email: email.trim().toLowerCase() }).exec();
+  }
+
   /** Solo para el login: es la única consulta que trae el hash de la contraseña. */
   findByEmailWithPassword(email: string): Promise<UserDocument | null> {
     return this.userModel

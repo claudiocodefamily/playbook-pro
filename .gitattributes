@@ -1,0 +1,2 @@
+# Fin de línea LF en todos los sistemas: en Windows, git convertía a CRLF y Prettier lo marcaba como error.
+* text=auto eol=lf

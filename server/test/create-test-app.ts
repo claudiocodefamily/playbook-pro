@@ -1,6 +1,27 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
+import request from 'supertest';
+
+export interface TestCoach {
+  id: string;
+  email: string;
+  /** Cabecera lista para `.set(coach.auth)`. */
+  auth: { Authorization: string };
+}
+
+let coachCounter = 0;
+
+/** Registra un coach nuevo y devuelve su token de acceso. */
+export async function registerCoach(app: INestApplication, name = 'Coach'): Promise<TestCoach> {
+  const email = `coach-${++coachCounter}-${Date.now()}@equipo.com`;
+  const response = await request(app.getHttpServer())
+    .post('/api/auth/register')
+    .send({ email, password: 'touchdown-2026', name })
+    .expect(201);
+  const body = response.body as { accessToken: string; user: { id: string } };
+  return { id: body.user.id, email, auth: { Authorization: `Bearer ${body.accessToken}` } };
+}
 
 export interface TestApp {
   app: INestApplication;
