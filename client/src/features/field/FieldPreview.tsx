@@ -10,6 +10,7 @@ import {
   toScreen,
   yardLines,
 } from './geometry';
+import { pathOrigins } from './paths';
 
 export interface PreviewPlayer extends Point {
   id: string;
@@ -44,6 +45,7 @@ export function FieldPreview({
   const height = window.maxY - window.minY;
   const losY = toScreen({ x: 0, y: 0 }, window).y;
   const playersById = new Map(players.map((player) => [player.id, player]));
+  const origins = pathOrigins({ players, assignments });
   const hashes = hashMarksX(ruleset);
 
   return (
@@ -134,13 +136,15 @@ export function FieldPreview({
             />
           );
         }
-        const path = [player, ...assignment.points].map((point) => toScreen(point, window));
+        const path = [origins.get(assignment.id) ?? player, ...assignment.points].map((point) =>
+          toScreen(point, window),
+        );
         return (
           <polyline
             key={assignment.id}
             points={path.map(({ x, y }) => `${x},${y}`).join(' ')}
             fill="none"
-            stroke="var(--color-chalk)"
+            stroke={assignment.style.color ?? 'var(--color-chalk)'}
             strokeWidth={0.3}
             strokeLinejoin="round"
             strokeDasharray={

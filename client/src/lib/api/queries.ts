@@ -38,6 +38,18 @@ export const queries = {
       queryKey: ['teams', teamId, 'plays', playId],
       queryFn: () => playsApi.get(teamId, playId),
     }),
+  playVersions: (teamId: string, playId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'plays', playId, 'versions'],
+      queryFn: () => playsApi.versions(teamId, playId),
+    }),
+  playVersion: (teamId: string, playId: string, version: number) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'plays', playId, 'versions', version],
+      queryFn: () => playsApi.version(teamId, playId, version),
+      // Una versión guardada nunca cambia.
+      staleTime: Infinity,
+    }),
 };
 
 export function useCreateTeam() {

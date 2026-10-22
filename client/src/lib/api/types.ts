@@ -61,3 +61,17 @@ export interface PlaySummary {
 export interface Play extends PlaySummary {
   diagram: PlayDiagram;
 }
+
+/** Una foto guardada con "Guardar versión". */
+export interface PlayVersionSummary {
+  id: string;
+  playId: string;
+  version: number;
+  name: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface PlayVersion extends PlayVersionSummary {
+  diagram: PlayDiagram;
+}

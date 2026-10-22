@@ -3,11 +3,16 @@ import { MousePointerClick, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Button } from '../../components/ui/button';
 import { SelectField, TextField } from '../../components/ui/field';
+import { AssignmentPanel } from './AssignmentPanel';
 import { removePlayer, updatePlayer } from './diagram-ops';
 import { useEditor } from './editor-context';
 
-/** Datos del jugador seleccionado: etiqueta, posición, dorsal y borrar. */
+/**
+ * Panel de lo seleccionado: datos del jugador (etiqueta, posición, dorsal) o estilo de su
+ * ruta o bloqueo.
+ */
 export function PlayerPanel() {
+  const selectedAssignmentId = useEditor((state) => state.selectedAssignmentId);
   const player = useEditor((state) =>
     state.diagram.players.find((candidate) => candidate.id === state.selectedId),
   );
@@ -15,7 +20,9 @@ export function PlayerPanel() {
 
   return (
     <AnimatePresence mode="wait" initial={false}>
-      {player ? (
+      {selectedAssignmentId ? (
+        <AssignmentPanel key={selectedAssignmentId} />
+      ) : player ? (
         <motion.div
           key={player.id}
           initial={{ opacity: 0, x: 12 }}
@@ -89,8 +96,9 @@ export function PlayerPanel() {
         >
           <MousePointerClick aria-hidden className="size-5 shrink-0 text-turf-700" />
           <p>
-            Arrastra a los jugadores para colocarlos. Toca uno para cambiar su etiqueta o su
-            posición.
+            Arrastra a los jugadores para colocarlos y toca uno para cambiar su etiqueta. Para
+            dibujar, elige Ruta, Bloqueo o Motion encima de la cancha y arrastra desde el jugador.
+            Toca una ruta para cambiar su estilo.
           </p>
         </motion.div>
       )}

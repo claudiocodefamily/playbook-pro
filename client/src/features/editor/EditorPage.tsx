@@ -1,6 +1,18 @@
-import { type PlaybookSide, type Ruleset } from '@playbook/shared';
+import { type PlayDiagram, type PlaybookSide, type Ruleset } from '@playbook/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Maximize2, Minimize2, Redo2, Shield, Undo2, UserPlus, Users } from 'lucide-react';
+import {
+  BookmarkPlus,
+  Check,
+  History,
+  Maximize2,
+  Minimize2,
+  Redo2,
+  Shield,
+  Undo2,
+  UserPlus,
+  Users,
+} from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { PageHeader } from '../../components/PageHeader';
@@ -15,13 +27,24 @@ import { errorText } from '../../lib/errors';
 import { SIDE_LABELS } from '../../lib/labels';
 import { FIELD_WIDTH, type FieldWindow, fitWindow } from '../field/geometry';
 import { FormationPicker } from '../plays/FormationPicker';
-import { addPlayer, applyFormation, countSide, MAX_PER_SIDE, removePlayer } from './diagram-ops';
+import {
+  addPlayer,
+  applyFormation,
+  countSide,
+  MAX_PER_SIDE,
+  removeAssignment,
+  removePlayer,
+} from './diagram-ops';
 import { EditorContext, useEditor } from './editor-context';
 import { createEditorStore, type EditorStore } from './editor-store';
 import { FieldCanvas } from './FieldCanvas';
+import { PlaybackBar } from './PlaybackBar';
 import { PlayerPanel } from './PlayerPanel';
 import { SaveIndicator } from './SaveIndicator';
+import { ToolBar } from './ToolBar';
 import { useAutosave } from './useAutosave';
+import { type Playback, usePlayback } from './usePlayback';
+import { VersionsDialog } from './VersionsDialog';
 
 /** Unidad contraria, para colocar al rival enfrente: ataque contra defensa. */
 const RIVAL_SIDE: Readonly<Record<PlaybookSide, PlaybookSide>> = {
@@ -65,6 +88,8 @@ export function EditorPage() {
 function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; ruleset: Ruleset }) {
   const [store] = useState(() => createEditorStore(play.diagram));
   const autosave = useAutosave(store, play);
+  const playback = usePlayback(store);
+  const [showVersions, setShowVersions] = useState(false);
   const queryClient = useQueryClient();
   const stageRef = useRef<HTMLDivElement>(null);
   const fullscreen = useFullscreen(stageRef);
@@ -79,7 +104,7 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
   // Ancho máximo para que la cancha completa quepa a lo alto de la pantalla.
   const aspect = FIELD_WIDTH / (fieldWindow.maxY - fieldWindow.minY);
 
-  useKeyboardShortcuts(store);
+  useKeyboardShortcuts(store, playback);
 
   return (
     <EditorContext value={store}>
@@ -87,7 +112,27 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
         title={play.name}
         subtitle={<SaveIndicator status={autosave.status} />}
         back={{ to: `/teams/${play.teamId}/playbooks/${play.playbookId}`, label: 'Jugadas' }}
-        actions={<HistoryButtons />}
+        actions={
+          <>
+            <HistoryButtons />
+            <SaveVersionButton
+              onSave={autosave.saveVersion}
+              disabled={autosave.status === 'conflict'}
+            />
+            <Button variant="secondary" onClick={() => setShowVersions(true)} title="Historial">
+              <History aria-hidden className="size-4" />
+              <span className="hidden sm:inline">Historial</span>
+            </Button>
+          </>
+        }
+      />
+      <VersionsDialog
+        open={showVersions}
+        onClose={() => setShowVersions(false)}
+        teamId={play.teamId}
+        playId={play.id}
+        ruleset={ruleset}
+        onRestore={(diagram: PlayDiagram) => store.getState().apply(() => diagram)}
       />
 
       {autosave.status === 'conflict' && (
@@ -109,30 +154,37 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div
           ref={stageRef}
-          className="relative mx-auto w-full rounded-3xl bg-turf-900 p-2 sm:p-3 lg:flex-1"
+          className="mx-auto flex w-full flex-col gap-2 rounded-3xl bg-turf-900 p-2 sm:p-3 lg:flex-1"
           style={{
+            // Lo que queda de alto tras la barra de herramientas y la de reproducción.
             maxWidth: fullscreen.active
-              ? `calc((100dvh - 2rem) * ${aspect})`
-              : `calc((100dvh - 13rem) * ${aspect})`,
+              ? `calc((100dvh - 10rem) * ${aspect})`
+              : `calc((100dvh - 20rem) * ${aspect})`,
           }}
         >
-          <FieldCanvas ruleset={ruleset} window={fieldWindow} />
-          {fullscreen.supported && (
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute top-5 right-5 opacity-90"
-              aria-label={fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'}
-              title={fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'}
-              onClick={() => void fullscreen.toggle()}
-            >
-              {fullscreen.active ? (
-                <Minimize2 aria-hidden className="size-5" />
-              ) : (
-                <Maximize2 aria-hidden className="size-5" />
-              )}
-            </Button>
-          )}
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <ToolBar />
+            </div>
+            {fullscreen.supported && (
+              <Button
+                variant="secondary"
+                size="icon"
+                className="mt-1 shrink-0"
+                aria-label={fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'}
+                title={fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'}
+                onClick={() => void fullscreen.toggle()}
+              >
+                {fullscreen.active ? (
+                  <Minimize2 aria-hidden className="size-5" />
+                ) : (
+                  <Maximize2 aria-hidden className="size-5" />
+                )}
+              </Button>
+            )}
+          </div>
+          <FieldCanvas ruleset={ruleset} window={fieldWindow} playbackTime={playback.time} />
+          <PlaybackBar playback={playback} />
         </div>
 
         <aside className="flex flex-col gap-4 lg:w-72">
@@ -155,13 +207,60 @@ function HistoryButtons() {
     <>
       <Button variant="secondary" onClick={undo} disabled={!canUndo} title="Deshacer (Ctrl+Z)">
         <Undo2 aria-hidden className="size-4" />
-        Deshacer
+        <span className="hidden sm:inline">Deshacer</span>
       </Button>
       <Button variant="secondary" onClick={redo} disabled={!canRedo} title="Rehacer (Ctrl+Shift+Z)">
         <Redo2 aria-hidden className="size-4" />
-        Rehacer
+        <span className="hidden sm:inline">Rehacer</span>
       </Button>
     </>
+  );
+}
+
+/** Deja una copia de la jugada en el historial, con una confirmación animada. */
+function SaveVersionButton({
+  onSave,
+  disabled,
+}: {
+  onSave: () => Promise<boolean>;
+  disabled: boolean;
+}) {
+  const [state, setState] = useState<'idle' | 'saving' | 'done'>('idle');
+  useEffect(() => {
+    if (state !== 'done') return;
+    const timer = setTimeout(() => setState('idle'), 2000);
+    return () => clearTimeout(timer);
+  }, [state]);
+
+  return (
+    <Button
+      variant={state === 'done' ? 'primary' : 'secondary'}
+      loading={state === 'saving'}
+      disabled={disabled}
+      title="Guarda una copia en el historial para poder volver a ella"
+      onClick={async () => {
+        setState('saving');
+        setState((await onSave()) ? 'done' : 'idle');
+      }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={state === 'done' ? 'done' : 'idle'}
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 6 }}
+          transition={{ duration: 0.15 }}
+          className="inline-flex items-center gap-2"
+        >
+          {state === 'done' ? (
+            <Check aria-hidden className="size-4" />
+          ) : (
+            <BookmarkPlus aria-hidden className="size-4" />
+          )}
+          {state === 'done' ? 'Versión guardada' : 'Guardar versión'}
+        </motion.span>
+      </AnimatePresence>
+    </Button>
   );
 }
 
@@ -251,8 +350,16 @@ function SidePanel({
   );
 }
 
-/** Ctrl/Cmd+Z deshace, Ctrl/Cmd+Shift+Z o Ctrl+Y rehace, Supr quita al jugador seleccionado. */
-function useKeyboardShortcuts(store: EditorStore) {
+/**
+ * Ctrl/Cmd+Z deshace, Ctrl/Cmd+Shift+Z o Ctrl+Y rehace, Supr borra lo seleccionado,
+ * Espacio reproduce o pausa la jugada y Escape deselecciona.
+ */
+function useKeyboardShortcuts(store: EditorStore, playback: Playback) {
+  // La reproducción cambia en cada fotograma: se lee de un ref para no recolgar el listener.
+  const playbackRef = useRef(playback);
+  useEffect(() => {
+    playbackRef.current = playback;
+  });
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -266,9 +373,19 @@ function useKeyboardShortcuts(store: EditorStore) {
       } else if (mod && event.key.toLowerCase() === 'y') {
         event.preventDefault();
         state.redo();
-      } else if ((event.key === 'Delete' || event.key === 'Backspace') && state.selectedId) {
-        const selected = state.selectedId;
-        state.apply((diagram) => removePlayer(diagram, selected));
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        const { selectedAssignmentId, selectedId } = state;
+        if (selectedAssignmentId) {
+          state.apply((diagram) => removeAssignment(diagram, selectedAssignmentId));
+        } else if (selectedId) {
+          state.apply((diagram) => removePlayer(diagram, selectedId));
+        }
+      } else if (event.key === ' ' && target?.tagName !== 'BUTTON') {
+        const current = playbackRef.current;
+        if (!current.canPlay) return;
+        event.preventDefault();
+        if (current.playing) current.pause();
+        else current.play();
       } else if (event.key === 'Escape') {
         state.select(null);
       }

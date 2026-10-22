@@ -1,6 +1,6 @@
 import { createEmptyDiagram, type PlayDiagram } from '@playbook/shared';
 import { describe, expect, it } from 'vitest';
-import { addPlayer } from './diagram-ops';
+import { addPathAssignment, addPlayer } from './diagram-ops';
 import { createEditorStore, HISTORY_LIMIT } from './editor-store';
 
 const withNotes = (notes: string) => (diagram: PlayDiagram) => ({ ...diagram, notes });
@@ -63,5 +63,32 @@ describe('editor store', () => {
     expect(store.getState().dirty).toBe(true);
     store.getState().markSaved(store.getState().diagram);
     expect(store.getState().dirty).toBe(false);
+  });
+
+  it('selecciona un jugador o un trazo, nunca los dos, y olvida el trazo borrado', () => {
+    const added = addPlayer(createEmptyDiagram(), {
+      side: 'O',
+      position: 'WR',
+      label: 'X',
+      at: { x: -20, y: -1 },
+    });
+    if (!added) throw new Error('debería caber');
+    const route = addPathAssignment(added.diagram, {
+      playerId: added.playerId,
+      type: 'route',
+      points: [{ x: -20, y: 8 }],
+    });
+    if (!route) throw new Error('debería añadirse la ruta');
+    const store = createEditorStore(route.diagram);
+
+    store.getState().select(added.playerId);
+    store.getState().selectAssignment(route.assignmentId);
+    expect(store.getState()).toMatchObject({
+      selectedId: null,
+      selectedAssignmentId: route.assignmentId,
+    });
+
+    store.getState().apply((diagram) => ({ ...diagram, assignments: [] }));
+    expect(store.getState().selectedAssignmentId).toBeNull();
   });
 });
