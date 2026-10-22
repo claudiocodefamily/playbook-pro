@@ -18,6 +18,7 @@ import {
   removeAssignment,
   removeBallEntry,
   removePlayer,
+  setAssignmentTiming,
   setBallTime,
   setSnapReceiver,
   simplifyPath,
@@ -329,5 +330,70 @@ describe('balón', () => {
     expect(setBallTime(pass, 1, -3).ball.carrierTimeline[1]?.t).toBe(0.4);
     expect(setBallTime(pass, 0, 3)).toBe(pass);
     expect(removeBallEntry(pass, 1).ball.carrierTimeline).toHaveLength(1);
+  });
+});
+
+describe('setAssignmentTiming', () => {
+  function chained() {
+    const base = applyFormation(createEmptyDiagram(), SLOTS, 'O');
+    const x = base.players.find((player) => player.label === 'X');
+    if (!x) throw new Error('falta el X');
+    const motion = addPathAssignment(base, {
+      playerId: x.id,
+      type: 'motion',
+      points: [{ x: -14, y: -1 }],
+    });
+    const first = motion
+      ? addPathAssignment(motion.diagram, {
+          playerId: x.id,
+          type: 'block',
+          points: [{ x: -14, y: 1 }],
+        })
+      : null;
+    const second = first
+      ? addPathAssignment(first.diagram, {
+          playerId: x.id,
+          type: 'route',
+          points: [{ x: -14, y: 10 }],
+        })
+      : null;
+    if (!motion || !first || !second) throw new Error('deberían añadirse');
+    return {
+      diagram: second.diagram,
+      motionId: motion.assignmentId,
+      blockId: first.assignmentId,
+      routeId: second.assignmentId,
+    };
+  }
+  const timing = (diagram: PlayDiagram, id: string) => {
+    const found = diagram.assignments.find((assignment) => assignment.id === id);
+    return [found?.startTime, found?.endTime];
+  };
+
+  it('el motion siempre acaba en el snap', () => {
+    const { diagram, motionId } = chained();
+    expect(
+      timing(setAssignmentTiming(diagram, motionId, { startTime: -3, endTime: 2 }), motionId),
+    ).toEqual([-3, 0]);
+    expect(
+      timing(setAssignmentTiming(diagram, motionId, { startTime: 1, endTime: 2 }), motionId),
+    ).toEqual([-0.3, 0]);
+  });
+
+  it('un trazo no empieza antes del snap ni se monta sobre los otros del mismo jugador', () => {
+    const { diagram, blockId, routeId } = chained();
+    const [, blockEnd] = timing(diagram, blockId);
+    const [routeStart] = timing(diagram, routeId);
+    expect(
+      timing(setAssignmentTiming(diagram, blockId, { startTime: -2, endTime: -1 }), blockId),
+    ).toEqual([0, routeStart]);
+    // Moverlo tarde lo deja pegado al siguiente trazo, con la misma duración posible.
+    const late = setAssignmentTiming(diagram, blockId, { startTime: 10, endTime: 12 });
+    expect(timing(late, blockId)[1]).toBe(routeStart);
+    // La ruta no puede salir antes de que acabe el bloqueo.
+    expect(
+      timing(setAssignmentTiming(diagram, routeId, { startTime: 0, endTime: 1 }), routeId)[0],
+    ).toBe(blockEnd);
+    expect(PlayDiagramSchema.safeParse(late).success).toBe(true);
   });
 });

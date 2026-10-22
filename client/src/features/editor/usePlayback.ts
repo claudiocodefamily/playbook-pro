@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { fullPlaybackRange } from '../field/ball';
+import { ballFlights, fullPlaybackRange } from '../field/ball';
+import { adjacentMoment, playMoments } from '../field/moments';
 import type { EditorStore } from './editor-store';
 
 export const PLAYBACK_SPEEDS = [1, 0.5] as const;
@@ -14,6 +15,7 @@ export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
 export function usePlayback(store: EditorStore) {
   const diagram = useStore(store, (state) => state.diagram);
   const range = useMemo(() => fullPlaybackRange(diagram), [diagram]);
+  const moments = useMemo(() => playMoments(diagram, ballFlights(diagram)), [diagram]);
   const [time, setTime] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
@@ -67,8 +69,21 @@ export function usePlayback(store: EditorStore) {
     setTime(t);
   }, []);
 
+  /** Salta al momento clave siguiente o anterior (snap, lanzamiento, recepción...). */
+  const step = useCallback(
+    (direction: 1 | -1) => {
+      const from = time ?? range.start - 1;
+      const target = adjacentMoment(moments, from, direction);
+      if (target) seek(target.t);
+      else if (direction === -1) reset();
+    },
+    [time, range, moments, seek, reset],
+  );
+
   return {
     time,
+    moments,
+    step,
     playing,
     speed,
     setSpeed,
