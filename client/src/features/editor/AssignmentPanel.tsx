@@ -1,10 +1,12 @@
 import { Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { TextField } from '../../components/ui/field';
 import { cn } from '../../lib/cn';
+import { type CoverageAssignment } from '../field/coverage';
 import { isPathAssignment, type PathAssignment } from '../field/paths';
-import { removeAssignment, updateAssignment } from './diagram-ops';
+import { removeAssignment, updateAssignment, updateZone } from './diagram-ops';
 import { useEditor } from './editor-context';
 
 const TYPE_LABELS: Readonly<Record<PathAssignment['type'], string>> = {
@@ -53,7 +55,8 @@ export function AssignmentPanel() {
     state.diagram.players.find((candidate) => candidate.id === assignment?.playerId),
   );
   const apply = useEditor((state) => state.apply);
-  if (!assignment || !isPathAssignment(assignment)) return null;
+  if (!assignment) return null;
+  if (!isPathAssignment(assignment)) return <CoveragePanel coverage={assignment} />;
   const { style } = assignment;
   const update = (changes: Parameters<typeof updateAssignment>[2]) =>
     apply((diagram) => updateAssignment(diagram, assignment.id, changes));
@@ -181,5 +184,150 @@ function Chip({
     >
       {children}
     </button>
+  );
+}
+
+/** Nombres habituales de las zonas, de las profundas a las cortas. */
+const ZONE_NAMES = [
+  'Deep half',
+  'Deep third',
+  'Deep middle',
+  'Flat',
+  'Curl/Flat',
+  'Hook/Curl',
+  'Middle hook',
+] as const;
+
+/** Marcaje (man) o zona de un defensor: a quién cubre, o nombre y tamaño de la zona. */
+function CoveragePanel({ coverage }: { coverage: CoverageAssignment }) {
+  const players = useEditor((state) => state.diagram.players);
+  const apply = useEditor((state) => state.apply);
+  const defender = players.find((player) => player.id === coverage.playerId);
+  const remove = () => apply((diagram) => removeAssignment(diagram, coverage.id));
+
+  return (
+    <motion.div
+      key={coverage.id}
+      initial={{ opacity: 0, x: 12 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -12 }}
+      transition={{ duration: 0.15 }}
+      className="flex flex-col gap-4"
+    >
+      <h2 className="font-semibold">
+        {coverage.type === 'man' ? 'Marcaje (man)' : 'Zona'}
+        {defender && <span className="font-normal text-slate-500"> de {defender.label}</span>}
+      </h2>
+
+      {coverage.type === 'man' ? (
+        <p className="text-sm text-slate-600">
+          Cubre a{' '}
+          <strong>
+            {players.find((player) => player.id === coverage.targetPlayerId)?.label ?? '?'}
+          </strong>{' '}
+          toda la jugada, también si hace motion antes del snap. En la animación lo sigue pegado por
+          el mismo lado por el que empezó.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-slate-600">
+            Tras el snap cae a su zona y se acerca al receptor que entra en ella. Arrastra la zona
+            en la cancha para moverla.
+          </p>
+          <div className="flex flex-col gap-2">
+            <TextField
+              label="Nombre de la zona"
+              value={coverage.zone.name ?? ''}
+              maxLength={30}
+              placeholder="Deep third, Flat…"
+              onChange={(event) =>
+                apply((diagram) => updateZone(diagram, coverage.id, { name: event.target.value }))
+              }
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {ZONE_NAMES.map((name) => (
+                <Chip
+                  key={name}
+                  active={coverage.zone.name === name}
+                  onClick={() =>
+                    apply((diagram) =>
+                      updateZone(diagram, coverage.id, {
+                        name: coverage.zone.name === name ? '' : name,
+                      }),
+                    )
+                  }
+                >
+                  {name}
+                </Chip>
+              ))}
+            </div>
+          </div>
+          <SizeSlider
+            label="Ancho"
+            value={coverage.zone.width}
+            min={4}
+            max={30}
+            onCommit={(width) => apply((diagram) => updateZone(diagram, coverage.id, { width }))}
+          />
+          <SizeSlider
+            label="Profundidad"
+            value={coverage.zone.depth}
+            min={3}
+            max={25}
+            onCommit={(depth) => apply((diagram) => updateZone(diagram, coverage.id, { depth }))}
+          />
+        </>
+      )}
+
+      <Button variant="secondary" className="text-red-700" onClick={remove}>
+        <Trash2 aria-hidden className="size-4" />
+        Quitar {coverage.type === 'man' ? 'marcaje' : 'zona'}
+      </Button>
+    </motion.div>
+  );
+}
+
+/** Se aplica al soltar, así arrastrar el control deja un solo paso en "Deshacer". */
+function SizeSlider({
+  label,
+  value,
+  min,
+  max,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    setDraft(value);
+  }
+  const commit = () => {
+    if (draft !== value) onCommit(draft);
+  };
+  return (
+    <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+      <span className="flex justify-between">
+        {label}
+        <span className="tabular-nums text-slate-500">{draft} yd</span>
+      </span>
+      <input
+        type="range"
+        className="h-8 accent-turf-700"
+        min={min}
+        max={max}
+        step={1}
+        value={draft}
+        onChange={(event) => setDraft(Number(event.target.value))}
+        onPointerUp={commit}
+        onKeyUp={commit}
+        onBlur={commit}
+      />
+    </label>
   );
 }

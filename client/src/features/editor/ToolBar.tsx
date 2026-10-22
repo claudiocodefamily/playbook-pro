@@ -1,4 +1,13 @@
-import { BrickWall, Hand, type LucideIcon, MoveHorizontal, Spline, Zap } from 'lucide-react';
+import {
+  BrickWall,
+  CircleDashed,
+  Hand,
+  Link2,
+  type LucideIcon,
+  MoveHorizontal,
+  Spline,
+  Zap,
+} from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../../lib/cn';
 import { useEditor } from './editor-context';
@@ -34,6 +43,18 @@ const TOOLS: readonly {
     label: 'Blitz',
     icon: Zap,
     hint: 'Blitz: un defensor que ataca al QB. Arrastra desde él.',
+  },
+  {
+    id: 'man',
+    label: 'Marcaje',
+    icon: Link2,
+    hint: 'Marcaje al hombre (man): arrastra desde un defensor hasta el jugador que cubre.',
+  },
+  {
+    id: 'zone',
+    label: 'Zona',
+    icon: CircleDashed,
+    hint: 'Zona: arrastra desde un defensor hasta el centro de la zona que cubre.',
   },
 ];
 

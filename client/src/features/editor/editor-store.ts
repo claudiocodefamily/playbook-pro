@@ -1,6 +1,6 @@
 import type { PlayDiagram } from '@playbook/shared';
 import { createStore } from 'zustand/vanilla';
-import type { DrawType } from './diagram-ops';
+import type { CoverageType, DrawType } from './diagram-ops';
 
 /** Pasos que se pueden deshacer. Cada uno es una copia del diagram (unos pocos KB). */
 export const HISTORY_LIMIT = 100;
@@ -13,8 +13,11 @@ export interface EditorState {
   selectedId: string | null;
   /** Ruta, bloqueo o motion seleccionado (nunca a la vez que un jugador). */
   selectedAssignmentId: string | null;
-  /** "move" arrastra jugadores; el resto dibuja ese tipo de trazo desde el jugador. */
-  tool: 'move' | DrawType;
+  /**
+   * "move" arrastra jugadores; los trazos se dibujan desde el jugador; "man" y "zone"
+   * asignan la cobertura de un defensor.
+   */
+  tool: 'move' | DrawType | CoverageType;
   /** true si hay cambios que aún no se guardaron en la API. */
   dirty: boolean;
 
