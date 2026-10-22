@@ -2,7 +2,7 @@ import { createBrowserRouter } from 'react-router';
 import { GuestOnly, RequireAuth } from './auth/RequireAuth';
 import { PlaybooksPage } from './features/playbooks/PlaybooksPage';
 import { PlaybookPage } from './features/plays/PlaybookPage';
-import { PlayPage } from './features/plays/PlayPage';
+import { EditorPage } from './features/editor/EditorPage';
 import { TeamsPage } from './features/teams/TeamsPage';
 import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
@@ -36,7 +36,7 @@ export const router = createBrowserRouter([
       { index: true, element: <TeamsPage /> },
       { path: 'teams/:teamId', element: <PlaybooksPage /> },
       { path: 'teams/:teamId/playbooks/:playbookId', element: <PlaybookPage /> },
-      { path: 'teams/:teamId/plays/:playId', element: <PlayPage /> },
+      { path: 'teams/:teamId/plays/:playId', element: <EditorPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
