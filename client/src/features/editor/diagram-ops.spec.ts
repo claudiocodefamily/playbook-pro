@@ -8,6 +8,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { pathOrigins } from '../field/paths';
 import {
+  addBallTransfer,
   addPathAssignment,
   addPlayer,
   applyFormation,
@@ -15,7 +16,10 @@ import {
   MAX_PER_SIDE,
   movePlayer,
   removeAssignment,
+  removeBallEntry,
   removePlayer,
+  setBallTime,
+  setSnapReceiver,
   simplifyPath,
   snapAndClamp,
   updateAssignment,
@@ -281,5 +285,49 @@ describe('updateAssignment y removeAssignment', () => {
     expect(unnamed.assignments[0]).not.toHaveProperty('routeName');
     expect(PlayDiagramSchema.safeParse(unnamed).success).toBe(true);
     expect(removeAssignment(unnamed, id).assignments).toEqual([]);
+  });
+});
+
+describe('balón', () => {
+  function withRoute() {
+    const base = slant();
+    const qb = base.players.find((player) => player.label === 'QB');
+    const x = base.players.find((player) => player.label === 'X');
+    const c = base.players.find((player) => player.label === 'C');
+    if (!qb || !x || !c) throw new Error('faltan jugadores');
+    return { diagram: { ...base, ball: { carrierTimeline: [] } }, qb, x, c };
+  }
+
+  it('sin snap no se puede pasar; con snap, el pase sale antes de que acabe la ruta', () => {
+    const { diagram, qb, x } = withRoute();
+    expect(addBallTransfer(diagram, x.id, 'pass')).toBeNull();
+
+    const snapped = setSnapReceiver(diagram, qb.id);
+    expect(addBallTransfer(snapped, qb.id, 'pass')).toBeNull();
+    const passed = addBallTransfer(snapped, x.id, 'pass');
+    expect(passed?.ball.carrierTimeline).toEqual([
+      { t: 0, playerId: qb.id, action: 'snap' },
+      { t: 0.9, playerId: x.id, action: 'pass' },
+    ]);
+    expect(PlayDiagramSchema.safeParse(passed).success).toBe(true);
+  });
+
+  it('cambiar quién recibe el snap quita el pase que iba a él mismo', () => {
+    const { diagram, qb, x } = withRoute();
+    const passed = addBallTransfer(setSnapReceiver(diagram, qb.id), x.id, 'pass');
+    if (!passed) throw new Error('debería añadirse el pase');
+    expect(setSnapReceiver(passed, x.id).ball.carrierTimeline).toEqual([
+      { t: 0, playerId: x.id, action: 'snap' },
+    ]);
+  });
+
+  it('el momento del pase no se adelanta al snap y quitar corta lo que venía después', () => {
+    const { diagram, qb, x, c } = withRoute();
+    const handoff = addBallTransfer(setSnapReceiver(diagram, qb.id), c.id, 'handoff');
+    const pass = handoff ? addBallTransfer(handoff, x.id, 'pass') : null;
+    if (!pass) throw new Error('deberían añadirse');
+    expect(setBallTime(pass, 1, -3).ball.carrierTimeline[1]?.t).toBe(0.4);
+    expect(setBallTime(pass, 0, 3)).toBe(pass);
+    expect(removeBallEntry(pass, 1).ball.carrierTimeline).toHaveLength(1);
   });
 });

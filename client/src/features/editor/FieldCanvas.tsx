@@ -1,7 +1,7 @@
 import type { DiagramPlayer, Point, Ruleset } from '@playbook/shared';
 import Konva from 'konva';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Arrow, Circle, Group, Layer, Line, Rect, Stage, Text } from 'react-konva';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Arrow, Circle, Ellipse, Group, Layer, Line, Rect, Stage, Text } from 'react-konva';
 import {
   FIELD_WIDTH,
   type FieldWindow,
@@ -10,6 +10,7 @@ import {
   toScreen,
   yardLines,
 } from '../field/geometry';
+import { ballAt, ballFlights, snapSpot } from '../field/ball';
 import {
   chainEnd,
   isPathAssignment,
@@ -32,6 +33,9 @@ const COLORS = {
   selected: '#38bdf8',
   ink: '#0f172a',
   draft: '#38bdf8',
+  ball: '#8b4513',
+  ballDark: '#3b1d0a',
+  pass: '#fde68a',
 };
 /** Distancia mínima entre puntos al dibujar con el dedo, para no guardar cientos. */
 const DRAW_SAMPLE_PX = 4;
@@ -87,6 +91,13 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
     fromScreen({ x: screen.x / scale, y: screen.y / scale }, window);
   const origins = pathOrigins(diagram);
   const positions = playbackTime === null ? null : positionsAt(diagram, playbackTime);
+  const flights = useMemo(() => ballFlights(diagram), [diagram]);
+  const hasOffense = diagram.players.some((player) => player.side === 'O');
+  const ball =
+    playbackTime === null
+      ? { position: snapSpot(diagram), height: 0, holderId: null }
+      : ballAt(diagram, playbackTime, flights);
+  const playerRadius = Math.max(PLAYER_RADIUS * scale, MIN_RADIUS);
   const losY = px({ x: 0, y: 0 }).y;
   const drawing = tool !== 'move';
 
@@ -200,6 +211,25 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
                 />
               );
             })}
+            {playbackTime === null &&
+              flights
+                .filter((flight) => flight.action === 'pass' || flight.action === 'pitch')
+                .map((flight) => {
+                  const from = px(flight.from);
+                  const to = px(flight.to);
+                  return (
+                    <Group key={`${flight.toPlayerId}-${flight.releaseTime}`} listening={false}>
+                      <Line
+                        points={[from.x, from.y, to.x, to.y]}
+                        stroke={COLORS.pass}
+                        strokeWidth={2}
+                        dash={[6, 5]}
+                        opacity={0.9}
+                      />
+                      <Circle x={to.x} y={to.y} radius={4} fill={COLORS.pass} />
+                    </Group>
+                  );
+                })}
             {draft && (
               <Line
                 points={[
@@ -228,7 +258,7 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
                 instant={positions !== null}
                 draggable={!drawing && playbackTime === null}
                 drawing={drawing}
-                radius={Math.max(PLAYER_RADIUS * scale, MIN_RADIUS)}
+                radius={playerRadius}
                 selected={player.id === selectedId}
                 toDiagram={toDiagram}
                 toScreen={px}
@@ -237,9 +267,79 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
               />
             ))}
           </Layer>
+
+          {hasOffense && (
+            <Layer listening={false}>
+              <Ball
+                position={px(ball.position)}
+                height={ball.height}
+                held={ball.holderId !== null}
+                size={Math.max(0.45 * scale, 7)}
+                playerRadius={playerRadius}
+              />
+            </Layer>
+          )}
         </Stage>
       )}
     </div>
+  );
+}
+
+/**
+ * El balón. En el aire crece y proyecta sombra para que se vea el arco del pase; en manos
+ * de un jugador se dibuja pegado a su círculo para no taparle la etiqueta.
+ */
+function Ball({
+  position,
+  height,
+  held,
+  size,
+  playerRadius,
+}: {
+  position: { x: number; y: number };
+  height: number;
+  held: boolean;
+  size: number;
+  playerRadius: number;
+}) {
+  const lift = height * size * 2.5;
+  const x = position.x + (held ? playerRadius * 0.75 : 0);
+  const y = position.y - (held ? playerRadius * 0.75 : 0) - lift;
+  const grow = 1 + height * 0.7;
+  return (
+    <>
+      {height > 0 && (
+        <Ellipse
+          x={position.x}
+          y={position.y}
+          radiusX={size * 0.9}
+          radiusY={size * 0.45}
+          fill="black"
+          opacity={0.25}
+        />
+      )}
+      <Group x={x} y={y} scaleX={grow} scaleY={grow} rotation={-35}>
+        <Ellipse
+          radiusX={size}
+          radiusY={size * 0.62}
+          fill={COLORS.ball}
+          stroke={COLORS.ballDark}
+          strokeWidth={1.5}
+          shadowColor="black"
+          shadowOpacity={0.35}
+          shadowBlur={3}
+        />
+        <Line points={[-size * 0.4, 0, size * 0.4, 0]} stroke="white" strokeWidth={1.5} />
+        {[-0.25, 0, 0.25].map((offset) => (
+          <Line
+            key={offset}
+            points={[size * offset, -size * 0.18, size * offset, size * 0.18]}
+            stroke="white"
+            strokeWidth={1.2}
+          />
+        ))}
+      </Group>
+    </>
   );
 }
 

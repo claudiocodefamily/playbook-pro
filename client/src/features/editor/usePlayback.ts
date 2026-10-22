@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { playbackRange } from '../field/paths';
+import { fullPlaybackRange } from '../field/ball';
 import type { EditorStore } from './editor-store';
 
 export const PLAYBACK_SPEEDS = [1, 0.5] as const;
@@ -13,7 +13,7 @@ export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
  */
 export function usePlayback(store: EditorStore) {
   const diagram = useStore(store, (state) => state.diagram);
-  const range = useMemo(() => playbackRange(diagram), [diagram]);
+  const range = useMemo(() => fullPlaybackRange(diagram), [diagram]);
   const [time, setTime] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
