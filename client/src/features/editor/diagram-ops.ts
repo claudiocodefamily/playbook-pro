@@ -414,3 +414,45 @@ export function setBallTime(diagram: PlayDiagram, index: number, t: number): Pla
 export function removeBallEntry(diagram: PlayDiagram, index: number): PlayDiagram {
   return withBall(diagram, ballEntries(diagram).slice(0, index));
 }
+
+/** Duración mínima de un trazo en la línea de tiempo, en segundos. */
+export const MIN_PATH_SECONDS = 0.3;
+
+/**
+ * Cambia cuándo empieza y acaba un trazo. El motion siempre termina en el snap; el resto
+ * empieza en el snap o después y no se solapa con los otros trazos del mismo jugador.
+ */
+export function setAssignmentTiming(
+  diagram: PlayDiagram,
+  assignmentId: string,
+  timing: { startTime: number; endTime: number },
+): PlayDiagram {
+  const assignment = diagram.assignments.find((candidate) => candidate.id === assignmentId);
+  if (!assignment || !isPathAssignment(assignment)) return diagram;
+  let startTime: number;
+  let endTime: number;
+  if (assignment.type === 'motion') {
+    endTime = 0;
+    startTime = Math.min(-MIN_PATH_SECONDS, Math.max(-10, timing.startTime));
+  } else {
+    const others = playerPaths(diagram, assignment.playerId).filter(
+      (path) => path.id !== assignment.id && path.type !== 'motion',
+    );
+    const before = others.filter((path) => path.startTime <= assignment.startTime);
+    const after = others.filter((path) => path.startTime > assignment.startTime);
+    const min = Math.max(0, ...before.map((path) => path.endTime));
+    const max = Math.min(TIME_LIMIT, ...after.map((path) => path.startTime));
+    const duration = Math.max(MIN_PATH_SECONDS, timing.endTime - timing.startTime);
+    startTime = Math.min(Math.max(min, timing.startTime), max - MIN_PATH_SECONDS);
+    endTime = Math.min(max, startTime + duration);
+  }
+  startTime = round(startTime);
+  endTime = round(endTime);
+  if (startTime === assignment.startTime && endTime === assignment.endTime) return diagram;
+  return {
+    ...diagram,
+    assignments: diagram.assignments.map((candidate) =>
+      candidate.id === assignmentId ? { ...candidate, startTime, endTime } : candidate,
+    ),
+  };
+}

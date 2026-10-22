@@ -41,6 +41,7 @@ import { FieldCanvas } from './FieldCanvas';
 import { PlaybackBar } from './PlaybackBar';
 import { PlayerPanel } from './PlayerPanel';
 import { SaveIndicator } from './SaveIndicator';
+import { TimelinePanel } from './TimelinePanel';
 import { ToolBar } from './ToolBar';
 import { useAutosave } from './useAutosave';
 import { type Playback, usePlayback } from './usePlayback';
@@ -152,39 +153,44 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
       )}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div
-          ref={stageRef}
-          className="mx-auto flex w-full flex-col gap-2 rounded-3xl bg-turf-900 p-2 sm:p-3 lg:flex-1"
-          style={{
-            // Lo que queda de alto tras la barra de herramientas y la de reproducción.
-            maxWidth: fullscreen.active
-              ? `calc((100dvh - 10rem) * ${aspect})`
-              : `calc((100dvh - 20rem) * ${aspect})`,
-          }}
-        >
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <ToolBar />
+        <div className="flex min-w-0 flex-col gap-4 lg:flex-1">
+          <div
+            ref={stageRef}
+            className="mx-auto flex w-full flex-col gap-2 rounded-3xl bg-turf-900 p-2 sm:p-3"
+            style={{
+              // Lo que queda de alto tras la barra de herramientas y la de reproducción.
+              maxWidth: fullscreen.active
+                ? `calc((100dvh - 10rem) * ${aspect})`
+                : `calc((100dvh - 20rem) * ${aspect})`,
+            }}
+          >
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <ToolBar />
+              </div>
+              {fullscreen.supported && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="mt-1 shrink-0"
+                  aria-label={
+                    fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'
+                  }
+                  title={fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'}
+                  onClick={() => void fullscreen.toggle()}
+                >
+                  {fullscreen.active ? (
+                    <Minimize2 aria-hidden className="size-5" />
+                  ) : (
+                    <Maximize2 aria-hidden className="size-5" />
+                  )}
+                </Button>
+              )}
             </div>
-            {fullscreen.supported && (
-              <Button
-                variant="secondary"
-                size="icon"
-                className="mt-1 shrink-0"
-                aria-label={fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'}
-                title={fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'}
-                onClick={() => void fullscreen.toggle()}
-              >
-                {fullscreen.active ? (
-                  <Minimize2 aria-hidden className="size-5" />
-                ) : (
-                  <Maximize2 aria-hidden className="size-5" />
-                )}
-              </Button>
-            )}
+            <FieldCanvas ruleset={ruleset} window={fieldWindow} playbackTime={playback.time} />
+            <PlaybackBar playback={playback} />
           </div>
-          <FieldCanvas ruleset={ruleset} window={fieldWindow} playbackTime={playback.time} />
-          <PlaybackBar playback={playback} />
+          <TimelinePanel playback={playback} />
         </div>
 
         <aside className="flex flex-col gap-4 lg:w-72">
@@ -352,7 +358,8 @@ function SidePanel({
 
 /**
  * Ctrl/Cmd+Z deshace, Ctrl/Cmd+Shift+Z o Ctrl+Y rehace, Supr borra lo seleccionado,
- * Espacio reproduce o pausa la jugada y Escape deselecciona.
+ * Espacio reproduce o pausa la jugada, las flechas saltan entre momentos clave y Escape
+ * deselecciona.
  */
 function useKeyboardShortcuts(store: EditorStore, playback: Playback) {
   // La reproducción cambia en cada fotograma: se lee de un ref para no recolgar el listener.
@@ -386,6 +393,14 @@ function useKeyboardShortcuts(store: EditorStore, playback: Playback) {
         event.preventDefault();
         if (current.playing) current.pause();
         else current.play();
+      } else if (
+        (event.key === 'ArrowRight' || event.key === 'ArrowLeft') &&
+        // Las barras de la línea de tiempo usan las flechas para moverse.
+        !event.defaultPrevented
+      ) {
+        if (!playbackRef.current.canPlay) return;
+        event.preventDefault();
+        playbackRef.current.step(event.key === 'ArrowRight' ? 1 : -1);
       } else if (event.key === 'Escape') {
         state.select(null);
       }
