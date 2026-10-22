@@ -294,7 +294,7 @@ export class Play {
 PlaySchema.index({ teamId: 1, playbookId: 1, deletedAt: 1, updatedAt: -1 }); // listado de un playbook
 PlaySchema.index({ teamId: 1, tags: 1 }); // filtro por tag
 PlaySchema.index({ teamId: 1, conceptIds: 1 }); // "jugadas que usan Mesh"
-PlaySchema.index({ name: 'text', tags: 'text' }, { default_language: 'none' });
+PlaySchema.index({ teamId: 1, name: 'text', tags: 'text' }, { default_language: 'none' }); // búsqueda dentro del equipo
 ```
 
 **Por qué `default_language: 'none'` en la búsqueda de texto:** con idioma "spanish" Mongo recorta palabras ("jugadas" → "jugad"), y eso estropea términos en inglés como "Cover 2" o "Zone Read". Con `none` busca las palabras tal cual.
@@ -317,6 +317,9 @@ export class PlayVersion {
 
   @Prop({ required: true })
   version!: number;
+
+  @Prop({ required: true, maxlength: 120 })
+  name!: string; // nombre de la jugada en ese momento, para el listado del historial
 
   @Prop({ type: Object, required: true })
   diagram!: PlayDiagram;
@@ -878,12 +881,12 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 **Hecho**
 
 - Plan de la Fase 1: arquitectura, schemas e índices, estructura del monorepo, esquema Zod del diagram y guía de Atlas.
+- Bloques 0, 1 y 2 en `main`. CI de GitHub Actions reactivada (formato, lint, tipos, tests, e2e y build).
+- Bloque 3: playbooks (borrado lógico junto con sus jugadas), formaciones propias y 11 globales cargadas al arrancar la API, jugadas con bloqueo optimista, "Guardar versión" (historial de las últimas 50, guardado en transacción), duplicar con ids nuevos y búsqueda por etiqueta o texto.
 
 **Sigue**
 
-- Conectar un repositorio de GitHub (vacío) al proyecto.
-- Crear el cluster M0 en Atlas siguiendo la sección 5 (puedes hacerlo en paralelo; para empezar a programar basta con el Mongo local).
-- Con tu OK: bloque 0 (setup del monorepo).
+- Bloque 4: editor web.
 
 **Decisiones pendientes**
 

@@ -1,23 +1,13 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
+import { isDuplicateKeyError } from '../../common/utils/mongo-errors.js';
 import { User, type UserDocument } from './schemas/user.schema.js';
 
 export interface CreateUserInput {
   email: string;
   passwordHash: string;
   name: string;
-}
-
-const DUPLICATE_KEY_ERROR = 11000;
-
-function isDuplicateKeyError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === DUPLICATE_KEY_ERROR
-  );
 }
 
 @Injectable()
