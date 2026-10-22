@@ -11,14 +11,17 @@ import {
   yardLines,
 } from '../field/geometry';
 import { ballAt, ballFlights, snapSpot } from '../field/ball';
+import { animatedPositions, type CoverageAssignment, isCoverage } from '../field/coverage';
+import { chainEnd, isPathAssignment, pathOrigins, type PathAssignment } from '../field/paths';
 import {
-  chainEnd,
-  isPathAssignment,
-  pathOrigins,
-  positionsAt,
-  type PathAssignment,
-} from '../field/paths';
-import { addPathAssignment, movePlayer, snapAndClamp } from './diagram-ops';
+  addManCoverage,
+  addPathAssignment,
+  addZoneCoverage,
+  MIN_PATH_YARDS,
+  movePlayer,
+  moveZone,
+  snapAndClamp,
+} from './diagram-ops';
 import { useEditor } from './editor-context';
 
 const PLAYER_RADIUS = 1; // yardas: con la línea a 2 yardas, los jugadores se tocan sin solaparse
@@ -36,13 +39,19 @@ const COLORS = {
   ball: '#8b4513',
   ballDark: '#3b1d0a',
   pass: '#fde68a',
+  coverage: '#fbbf24',
 };
+/** Al soltar un marcaje, se engancha al jugador de ataque más cercano dentro de esta distancia. */
+const MAN_SNAP_YARDS = 3;
 /** Distancia mínima entre puntos al dibujar con el dedo, para no guardar cientos. */
 const DRAW_SAMPLE_PX = 4;
 
 interface Draft {
   playerId: string;
-  /** Dónde empieza el trazo en pantalla: el jugador o el final de su trazo anterior. */
+  /**
+   * Dónde empieza el trazo en pantalla: el jugador o el final de su trazo anterior. En las
+   * coberturas, el defensor.
+   */
   origin: { x: number; y: number };
   /** Lo que va dibujando el dedo, en píxeles. */
   raw: { x: number; y: number }[];
@@ -90,7 +99,8 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
   const toDiagram = (screen: { x: number; y: number }): Point =>
     fromScreen({ x: screen.x / scale, y: screen.y / scale }, window);
   const origins = pathOrigins(diagram);
-  const positions = playbackTime === null ? null : positionsAt(diagram, playbackTime);
+  const positions = playbackTime === null ? null : animatedPositions(diagram, playbackTime);
+  const positionOf = (player: DiagramPlayer): Point => positions?.get(player.id) ?? player;
   const flights = useMemo(() => ballFlights(diagram), [diagram]);
   const hasOffense = diagram.players.some((player) => player.side === 'O');
   const ball =
@@ -100,11 +110,14 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
   const playerRadius = Math.max(PLAYER_RADIUS * scale, MIN_RADIUS);
   const losY = px({ x: 0, y: 0 }).y;
   const drawing = tool !== 'move';
+  const coverageTool = tool === 'man' || tool === 'zone';
 
   const startDraw = (playerId: string, pointer: { x: number; y: number }) => {
     if (playbackTime !== null || tool === 'move') return;
     const player = diagram.players.find((candidate) => candidate.id === playerId);
-    const origin = tool === 'motion' ? player : chainEnd(diagram, playerId);
+    // Las coberturas solo salen de un defensor.
+    if (coverageTool && player?.side !== 'D') return;
+    const origin = tool === 'motion' || coverageTool ? player : chainEnd(diagram, playerId);
     if (!origin) return;
     setDraft({ playerId, origin: px(origin), raw: [pointer] });
   };
@@ -114,6 +127,32 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
     if (!active || tool === 'move') return;
     setDraft(null);
     drewAt.current = performance.now();
+    let addedId: string | null = null;
+    if (tool === 'man' || tool === 'zone') {
+      const end = toDiagram(active.raw.at(-1) ?? active.origin);
+      const from = toDiagram(active.origin);
+      apply((current) => {
+        let added: ReturnType<typeof addZoneCoverage> = null;
+        if (tool === 'zone') {
+          if (Math.hypot(end.x - from.x, end.y - from.y) >= MIN_PATH_YARDS) {
+            added = addZoneCoverage(current, active.playerId, end);
+          }
+        } else {
+          const target = current.players
+            .filter((player) => player.side === 'O')
+            .map((player) => ({ player, distance: Math.hypot(player.x - end.x, player.y - end.y) }))
+            .filter(({ distance }) => distance <= MAN_SNAP_YARDS)
+            .sort((a, b) => a.distance - b.distance)[0];
+          if (target) added = addManCoverage(current, active.playerId, target.player.id);
+        }
+        if (!added) return current;
+        addedId = added.assignmentId;
+        return added.diagram;
+      });
+      if (addedId) selectAssignment(addedId);
+      else select(active.playerId);
+      return;
+    }
     // Lo dibujado se pega al origen: da igual dónde empezó el dedo exactamente.
     const start = active.raw[0] ?? active.origin;
     const points = active.raw.map((point) =>
@@ -122,7 +161,6 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
         y: active.origin.y + point.y - start.y,
       }),
     );
-    let addedId: string | null = null;
     apply((current) => {
       const added = addPathAssignment(current, { playerId: active.playerId, type: tool, points });
       if (!added) return current;
@@ -196,6 +234,29 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
           </Layer>
 
           <Layer listening={!drawing && playbackTime === null}>
+            {diagram.assignments.filter(isCoverage).map((coverage) => {
+              const defender = diagram.players.find((player) => player.id === coverage.playerId);
+              if (!defender) return null;
+              const target =
+                coverage.type === 'man'
+                  ? diagram.players.find((player) => player.id === coverage.targetPlayerId)
+                  : undefined;
+              return (
+                <CoverageShape
+                  key={coverage.id}
+                  coverage={coverage}
+                  from={px(positionOf(defender))}
+                  to={target ? px(positionOf(target)) : undefined}
+                  toScreen={px}
+                  toDiagram={toDiagram}
+                  scale={scale}
+                  selected={coverage.id === selectedAssignmentId}
+                  dimmed={playbackTime !== null}
+                  onSelect={() => selectAssignment(coverage.id)}
+                  onMove={(center) => apply((current) => moveZone(current, coverage.id, center))}
+                />
+              );
+            })}
             {diagram.assignments.filter(isPathAssignment).map((assignment) => {
               const origin = origins.get(assignment.id);
               if (!origin) return null;
@@ -230,7 +291,37 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
                     </Group>
                   );
                 })}
-            {draft && (
+            {draft && coverageTool && (
+              <>
+                <Line
+                  points={[
+                    draft.origin.x,
+                    draft.origin.y,
+                    draft.raw.at(-1)?.x ?? draft.origin.x,
+                    draft.raw.at(-1)?.y ?? draft.origin.y,
+                  ]}
+                  stroke={COLORS.draft}
+                  strokeWidth={3}
+                  dash={[8, 6]}
+                  listening={false}
+                />
+                {tool === 'zone' && draft.raw.length > 1 && (
+                  <Ellipse
+                    x={draft.raw.at(-1)?.x ?? 0}
+                    y={draft.raw.at(-1)?.y ?? 0}
+                    radiusX={5 * scale}
+                    radiusY={3.5 * scale}
+                    stroke={COLORS.draft}
+                    strokeWidth={2}
+                    dash={[8, 6]}
+                    fill={COLORS.draft}
+                    opacity={0.5}
+                    listening={false}
+                  />
+                )}
+              </>
+            )}
+            {draft && !coverageTool && (
               <Line
                 points={[
                   draft.origin,
@@ -254,7 +345,7 @@ export function FieldCanvas({ ruleset, window, playbackTime }: FieldCanvasProps)
               <PlayerNode
                 key={player.id}
                 player={player}
-                position={px(positions?.get(player.id) ?? player)}
+                position={px(positionOf(player))}
                 instant={positions !== null}
                 draggable={!drawing && playbackTime === null}
                 drawing={drawing}
@@ -338,6 +429,115 @@ function Ball({
             strokeWidth={1.2}
           />
         ))}
+      </Group>
+    </>
+  );
+}
+
+interface CoverageShapeProps {
+  coverage: CoverageAssignment;
+  /** Defensor y, en man, el jugador que cubre (en píxeles, donde estén ahora). */
+  from: { x: number; y: number };
+  to: { x: number; y: number } | undefined;
+  toScreen: (point: Point) => { x: number; y: number };
+  toDiagram: (screen: { x: number; y: number }) => Point;
+  scale: number;
+  selected: boolean;
+  dimmed: boolean;
+  onSelect: () => void;
+  onMove: (center: Point) => void;
+}
+
+/**
+ * Cobertura de un defensor. Man: línea discontinua hasta su jugador. Zona: la zona
+ * sombreada, que se puede arrastrar, con una línea desde el defensor.
+ */
+function CoverageShape({
+  coverage,
+  from,
+  to,
+  toScreen: toPx,
+  toDiagram,
+  scale,
+  selected,
+  dimmed,
+  onSelect,
+  onMove,
+}: CoverageShapeProps) {
+  const color = selected ? COLORS.selected : COLORS.coverage;
+  const select = () => onSelect();
+  if (coverage.type === 'man') {
+    if (!to) return null;
+    return (
+      <Group onClick={select} onTap={select} opacity={dimmed ? 0.5 : 0.9}>
+        <Line
+          points={[from.x, from.y, to.x, to.y]}
+          stroke={color}
+          strokeWidth={selected ? 3.5 : 2}
+          dash={[6, 6]}
+          hitStrokeWidth={20}
+        />
+        <Text
+          text="MAN"
+          x={(from.x + to.x) / 2 + 4}
+          y={(from.y + to.y) / 2 - 14}
+          fontSize={Math.max(10, 0.8 * scale)}
+          fontStyle="bold"
+          fill={color}
+          listening={false}
+        />
+      </Group>
+    );
+  }
+  const center = coverage.points[0];
+  if (!center) return null;
+  const at = toPx(center);
+  return (
+    <>
+      <Line
+        points={[from.x, from.y, at.x, at.y]}
+        stroke={color}
+        strokeWidth={1.5}
+        dash={[4, 6]}
+        opacity={dimmed ? 0.35 : 0.7}
+        listening={false}
+      />
+      <Group
+        x={at.x}
+        y={at.y}
+        draggable={!dimmed}
+        onClick={select}
+        onTap={select}
+        onDragStart={select}
+        onDragEnd={(event) => {
+          const target = snapAndClamp(toDiagram(event.target.position()));
+          event.target.position(toPx(target));
+          onMove(target);
+        }}
+      >
+        <Ellipse
+          radiusX={(coverage.zone.width / 2) * scale}
+          radiusY={(coverage.zone.depth / 2) * scale}
+          fill={color}
+          opacity={dimmed ? 0.12 : 0.2}
+          stroke={color}
+          strokeWidth={selected ? 3 : 1.5}
+          dash={[8, 6]}
+        />
+        {coverage.zone.name && (
+          <Text
+            text={coverage.zone.name}
+            width={coverage.zone.width * scale}
+            offsetX={(coverage.zone.width * scale) / 2}
+            offsetY={6}
+            align="center"
+            fontSize={Math.max(10, 0.8 * scale)}
+            fontStyle="bold"
+            fill={color}
+            opacity={dimmed ? 0.5 : 1}
+            listening={false}
+          />
+        )}
       </Group>
     </>
   );

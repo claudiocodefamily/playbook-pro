@@ -99,6 +99,12 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
     const fit = fitWindow([
       ...play.diagram.players,
       ...play.diagram.assignments.flatMap((a) => a.points),
+      // El borde profundo de cada zona (fitWindow ya añade 5 yardas de margen).
+      ...play.diagram.assignments.flatMap((a) =>
+        a.type === 'zone' && a.points[0]
+          ? [{ x: a.points[0].x, y: a.points[0].y + a.zone.depth / 2 - 4 }]
+          : [],
+      ),
     ]);
     return { minY: Math.min(-12, fit.minY), maxY: Math.max(18, fit.maxY) };
   });

@@ -9,6 +9,7 @@ import {
   type Position,
 } from '@playbook/shared';
 import { ballEntries, type BallEntry } from '../field/ball';
+import { isCoverage, type ZoneAssignment } from '../field/coverage';
 import {
   chainEnd,
   isPathAssignment,
@@ -453,6 +454,116 @@ export function setAssignmentTiming(
     ...diagram,
     assignments: diagram.assignments.map((candidate) =>
       candidate.id === assignmentId ? { ...candidate, startTime, endTime } : candidate,
+    ),
+  };
+}
+
+/** Coberturas que se dibujan desde un defensor. */
+export const COVERAGE_TYPES = ['man', 'zone'] as const;
+export type CoverageType = (typeof COVERAGE_TYPES)[number];
+
+const COVERAGE_STYLE = { line: 'dashed', end: 'none', curved: false } as const;
+
+/** Un defensor solo tiene una cobertura: la nueva sustituye a la anterior. */
+function withCoverage(diagram: PlayDiagram, coverage: Assignment): PlayDiagram {
+  return {
+    ...diagram,
+    assignments: [
+      ...diagram.assignments.filter(
+        (assignment) => !(assignment.playerId === coverage.playerId && isCoverage(assignment)),
+      ),
+      coverage,
+    ],
+  };
+}
+
+/** Marcaje al hombre (man): el defensor sigue a ese jugador de ataque toda la jugada. */
+export function addManCoverage(
+  diagram: PlayDiagram,
+  defenderId: string,
+  targetId: string,
+): { diagram: PlayDiagram; assignmentId: string } | null {
+  const defender = diagram.players.find((player) => player.id === defenderId);
+  const target = diagram.players.find((player) => player.id === targetId);
+  if (!defender || !target || defender.side !== 'D' || target.side !== 'O') return null;
+  const id = newId();
+  return {
+    diagram: withCoverage(diagram, {
+      id,
+      playerId: defenderId,
+      type: 'man',
+      targetPlayerId: targetId,
+      points: [],
+      style: { ...COVERAGE_STYLE },
+      startTime: 0,
+      endTime: TIME_LIMIT,
+    }),
+    assignmentId: id,
+  };
+}
+
+/** Zonas profundas (a partir de 12 yardas) y cortas, con el tamaño típico de cada una. */
+const DEEP_ZONE_YARDS = 12;
+
+/** Cobertura en zona: el defensor cae a la zona centrada en `center`. */
+export function addZoneCoverage(
+  diagram: PlayDiagram,
+  defenderId: string,
+  center: Point,
+): { diagram: PlayDiagram; assignmentId: string } | null {
+  const defender = diagram.players.find((player) => player.id === defenderId);
+  if (!defender || defender.side !== 'D') return null;
+  const point = snapAndClamp(center);
+  const deep = point.y >= DEEP_ZONE_YARDS;
+  const id = newId();
+  return {
+    diagram: withCoverage(diagram, {
+      id,
+      playerId: defenderId,
+      type: 'zone',
+      points: [point],
+      zone: { shape: 'ellipse', width: deep ? 16 : 10, depth: deep ? 12 : 7 },
+      style: { ...COVERAGE_STYLE },
+      startTime: 0,
+      endTime: TIME_LIMIT,
+    }),
+    assignmentId: id,
+  };
+}
+
+export type ZoneChanges = Partial<Pick<ZoneAssignment['zone'], 'width' | 'depth' | 'name'>>;
+
+/** Cambia el tamaño o el nombre de una zona. Nombre vacío lo quita. */
+export function updateZone(
+  diagram: PlayDiagram,
+  assignmentId: string,
+  changes: ZoneChanges,
+): PlayDiagram {
+  return {
+    ...diagram,
+    assignments: diagram.assignments.map((assignment) => {
+      if (assignment.id !== assignmentId || assignment.type !== 'zone') return assignment;
+      const { name: previousName, ...size } = assignment.zone;
+      const name = changes.name === undefined ? previousName : changes.name.slice(0, 30);
+      const width = Math.min(53, Math.max(2, changes.width ?? size.width));
+      const depth = Math.min(40, Math.max(2, changes.depth ?? size.depth));
+      return {
+        ...assignment,
+        zone: { ...size, width, depth, ...(name?.trim() ? { name } : {}) },
+      };
+    }),
+  };
+}
+
+/** Mueve el centro de una zona (arrastrándola en la cancha). */
+export function moveZone(diagram: PlayDiagram, assignmentId: string, center: Point): PlayDiagram {
+  const point = snapAndClamp(center);
+  return {
+    ...diagram,
+    assignments: diagram.assignments.map((assignment) =>
+      assignment.id === assignmentId && assignment.type === 'zone'
+        ? { ...assignment, points: [point] }
+        : assignment,
     ),
   };
 }

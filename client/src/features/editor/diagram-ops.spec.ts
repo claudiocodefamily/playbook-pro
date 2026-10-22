@@ -9,6 +9,8 @@ import { describe, expect, it } from 'vitest';
 import { pathOrigins } from '../field/paths';
 import {
   addBallTransfer,
+  addManCoverage,
+  addZoneCoverage,
   addPathAssignment,
   addPlayer,
   applyFormation,
@@ -25,6 +27,7 @@ import {
   snapAndClamp,
   updateAssignment,
   updatePlayer,
+  updateZone,
 } from './diagram-ops';
 
 const SLOTS: FormationSlot[] = [
@@ -395,5 +398,54 @@ describe('setAssignmentTiming', () => {
       timing(setAssignmentTiming(diagram, routeId, { startTime: 0, endTime: 1 }), routeId)[0],
     ).toBe(blockEnd);
     expect(PlayDiagramSchema.safeParse(late).success).toBe(true);
+  });
+});
+
+describe('coberturas', () => {
+  function withDefender() {
+    const added = addPlayer(slant(), {
+      side: 'D',
+      position: 'CB',
+      label: 'CB',
+      at: { x: -19, y: 6 },
+    });
+    if (!added) throw new Error('debería caber');
+    const x = added.diagram.players.find((player) => player.label === 'X');
+    if (!x) throw new Error('falta el X');
+    return { diagram: added.diagram, cb: added.playerId, x: x.id };
+  }
+
+  it('el marcaje solo va de un defensor a un jugador de ataque', () => {
+    const { diagram, cb, x } = withDefender();
+    expect(addManCoverage(diagram, x, cb)).toBeNull();
+    const man = addManCoverage(diagram, cb, x);
+    expect(man?.diagram.assignments.at(-1)).toMatchObject({
+      type: 'man',
+      playerId: cb,
+      targetPlayerId: x,
+    });
+    expect(PlayDiagramSchema.safeParse(man?.diagram).success).toBe(true);
+  });
+
+  it('una zona nueva sustituye al marcaje y su tamaño depende de lo profunda que esté', () => {
+    const { diagram, cb, x } = withDefender();
+    const man = addManCoverage(diagram, cb, x);
+    const deep = man ? addZoneCoverage(man.diagram, cb, { x: -15, y: 16.2 }) : null;
+    const coverages = deep?.diagram.assignments.filter((a) => a.playerId === cb) ?? [];
+    expect(coverages).toHaveLength(1);
+    expect(coverages[0]).toMatchObject({
+      type: 'zone',
+      points: [{ x: -15, y: 16 }],
+      zone: { width: 16 },
+    });
+    const flat = addZoneCoverage(diagram, cb, { x: -18, y: 3 });
+    expect(flat?.diagram.assignments.at(-1)).toMatchObject({ zone: { width: 10, depth: 7 } });
+
+    const id = deep?.assignmentId ?? '';
+    const named = updateZone(deep?.diagram ?? diagram, id, { name: 'Deep third', width: 100 });
+    expect(named.assignments.find((a) => a.id === id)).toMatchObject({
+      zone: { name: 'Deep third', width: 53 },
+    });
+    expect(PlayDiagramSchema.safeParse(named).success).toBe(true);
   });
 });
