@@ -24,41 +24,60 @@ export function useAutosave(store: EditorStore, play: Play) {
   const dirty = useStore(store, (state) => state.dirty);
   const diagram = useStore(store, (state) => state.diagram);
   const version = useRef(play.version);
-  const inFlight = useRef<Promise<void> | null>(null);
+  const inFlight = useRef<Promise<boolean> | null>(null);
   const [status, setStatus] = useState<SaveStatus>('saved');
   const [error, setError] = useState<string | null>(null);
 
-  const save = useCallback(async (): Promise<void> => {
-    if (inFlight.current) return inFlight.current;
-    const sent: PlayDiagram = store.getState().diagram;
-    setStatus('saving');
-    inFlight.current = (async () => {
-      try {
-        const saved = await playsApi.update(play.teamId, play.id, {
-          version: version.current,
-          diagram: sent,
-        });
-        version.current = saved.version;
-        store.getState().markSaved(sent);
-        // El resto de la web (listados, vista) ve la jugada al día sin volver a pedirla.
-        queryClient.setQueryData(queries.play(play.teamId, play.id).queryKey, {
-          ...saved,
-          diagram: sent,
-        });
-        setStatus('saved');
-        setError(null);
-      } catch (caught) {
-        const conflict = caught instanceof ApiError && caught.status === 409;
-        setStatus(conflict ? 'conflict' : 'error');
-        setError(
-          caught instanceof ApiError ? caught.message : 'No se pudo guardar. Revisa tu conexión.',
-        );
-      } finally {
-        inFlight.current = null;
+  /**
+   * Guarda lo que hay en pantalla. Con `withVersion` además deja una foto en el historial
+   * ("Guardar versión"). Devuelve true si se guardó.
+   */
+  const save = useCallback(
+    async (withVersion = false): Promise<boolean> => {
+      if (inFlight.current) {
+        // Un autoguardado normal ya en marcha basta; una versión espera a que termine.
+        if (!withVersion) return inFlight.current;
+        await inFlight.current;
       }
-    })();
-    return inFlight.current;
-  }, [store, play.teamId, play.id, queryClient]);
+      const sent: PlayDiagram = store.getState().diagram;
+      setStatus('saving');
+      inFlight.current = (async () => {
+        try {
+          const saved = await playsApi.update(play.teamId, play.id, {
+            version: version.current,
+            diagram: sent,
+            ...(withVersion ? { saveVersion: true } : {}),
+          });
+          version.current = saved.version;
+          store.getState().markSaved(sent);
+          // El resto de la web (listados, vista) ve la jugada al día sin volver a pedirla.
+          queryClient.setQueryData(queries.play(play.teamId, play.id).queryKey, {
+            ...saved,
+            diagram: sent,
+          });
+          if (withVersion) {
+            void queryClient.invalidateQueries({
+              queryKey: queries.playVersions(play.teamId, play.id).queryKey,
+            });
+          }
+          setStatus('saved');
+          setError(null);
+          return true;
+        } catch (caught) {
+          const conflict = caught instanceof ApiError && caught.status === 409;
+          setStatus(conflict ? 'conflict' : 'error');
+          setError(
+            caught instanceof ApiError ? caught.message : 'No se pudo guardar. Revisa tu conexión.',
+          );
+          return false;
+        } finally {
+          inFlight.current = null;
+        }
+      })();
+      return inFlight.current;
+    },
+    [store, play.teamId, play.id, queryClient],
+  );
 
   useEffect(() => {
     if (!dirty || status === 'conflict' || status === 'saving') return;
@@ -79,5 +98,9 @@ export function useAutosave(store: EditorStore, play: Play) {
   }, [dirty]);
 
   // Con cambios por guardar, "guardado" pasa a "sin guardar" sin esperar a otro render.
-  return { status: status === 'saved' && dirty ? 'pending' : status, error, saveNow: save };
+  return {
+    status: status === 'saved' && dirty ? 'pending' : status,
+    error,
+    saveVersion: () => save(true),
+  };
 }

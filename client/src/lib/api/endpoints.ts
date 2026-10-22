@@ -1,6 +1,16 @@
 import type { PlayDiagram, PlaybookSide, Ruleset } from '@playbook/shared';
 import { api } from './client';
-import type { AuthResponse, Formation, Play, Playbook, PlaySummary, Team, User } from './types';
+import type {
+  AuthResponse,
+  Formation,
+  Play,
+  Playbook,
+  PlaySummary,
+  PlayVersion,
+  PlayVersionSummary,
+  Team,
+  User,
+} from './types';
 
 const json = (body: unknown) => ({ body });
 
@@ -85,4 +95,8 @@ export const playsApi = {
     }),
   remove: (teamId: string, playId: string) =>
     api.request<void>(`/teams/${teamId}/plays/${playId}`, { method: 'DELETE' }),
+  versions: (teamId: string, playId: string) =>
+    api.request<PlayVersionSummary[]>(`/teams/${teamId}/plays/${playId}/versions`),
+  version: (teamId: string, playId: string, version: number) =>
+    api.request<PlayVersion>(`/teams/${teamId}/plays/${playId}/versions/${version}`),
 };

@@ -884,9 +884,11 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - Bloques 0, 1 y 2 en `main`. CI de GitHub Actions reactivada (formato, lint, tipos, tests, e2e y build).
 - Bloque 3: playbooks (borrado lógico junto con sus jugadas), formaciones propias y 11 globales cargadas al arrancar la API, jugadas con bloqueo optimista, "Guardar versión" (historial de las últimas 50, guardado en transacción), duplicar con ids nuevos y búsqueda por etiqueta o texto.
 
+- Bloque 4: editor web. Login y registro, equipos, playbooks y jugadas con búsqueda. Cancha Konva con drag & drop, formaciones propias y del rival, deshacer/rehacer y autoguardado. Dibujo de rutas, bloqueos, motion y blitz arrastrando desde el jugador, con estilos y nombres del route tree. Animación de la jugada (play, pausa, ½x y barra de tiempo) para explicarla en la sesión. "Guardar versión" e historial con vista previa y "Volver a esta versión".
+
 **Sigue**
 
-- Bloque 4: editor web.
+- Cierre de la Fase 1: repasar el plan contra lo hecho y decidir la Fase 2.
 
 **Decisiones pendientes**
 
