@@ -8,6 +8,7 @@ import {
   type Point,
   type Position,
 } from '@playbook/shared';
+import { ballEntries, type BallEntry } from '../field/ball';
 import {
   chainEnd,
   isPathAssignment,
@@ -346,4 +347,70 @@ export function removeAssignment(diagram: PlayDiagram, assignmentId: string): Pl
     ...diagram,
     assignments: diagram.assignments.filter((assignment) => assignment.id !== assignmentId),
   };
+}
+
+/** Cómo recibe un jugador el balón después del snap. */
+export const BALL_TRANSFERS = ['handoff', 'pitch', 'pass'] as const;
+export type BallTransfer = (typeof BALL_TRANSFERS)[number];
+const MAX_BALL_ENTRIES = 10;
+/** Separación mínima entre dos cambios de manos, en segundos. */
+const BALL_GAP = 0.4;
+
+function withBall(diagram: PlayDiagram, entries: BallEntry[]): PlayDiagram {
+  return { ...diagram, ball: { ...diagram.ball, carrierTimeline: entries } };
+}
+
+/**
+ * Quién recibe el snap. Si el siguiente cambio de manos era para ese mismo jugador, deja
+ * de tener sentido y se quita junto con todo lo que venía después.
+ */
+export function setSnapReceiver(diagram: PlayDiagram, playerId: string): PlayDiagram {
+  const rest = ballEntries(diagram).filter((entry) => entry.action !== 'snap');
+  const cut = rest.findIndex((entry) => entry.playerId === playerId);
+  const kept = cut === 0 ? [] : rest;
+  return withBall(diagram, [{ t: 0, playerId, action: 'snap' }, ...kept]);
+}
+
+/**
+ * Le da el balón a un jugador con un handoff, un pitch o un pase. El momento se propone
+ * solo: el pase sale poco antes de que el receptor acabe su ruta. Devuelve null si aún no
+ * hay snap, si el jugador ya tiene el balón o si se llegó al máximo de cambios de manos.
+ */
+export function addBallTransfer(
+  diagram: PlayDiagram,
+  playerId: string,
+  action: BallTransfer,
+): PlayDiagram | null {
+  const entries = ballEntries(diagram);
+  const last = entries.at(-1);
+  if (!last || last.playerId === playerId || entries.length >= MAX_BALL_ENTRIES) return null;
+  const routeEnd = Math.max(0, ...playerPaths(diagram, playerId).map((path) => path.endTime));
+  const suggested =
+    action === 'pass'
+      ? routeEnd > 0
+        ? routeEnd - 0.6
+        : last.t + 1.5
+      : last.t + (action === 'handoff' ? 0.6 : 0.8);
+  const t = round(Math.min(TIME_LIMIT - 2, Math.max(suggested, last.t + BALL_GAP)));
+  return withBall(diagram, [...entries, { t, playerId, action }]);
+}
+
+/** Cambia cuándo sale el balón, sin adelantar al cambio anterior ni pasar al siguiente. */
+export function setBallTime(diagram: PlayDiagram, index: number, t: number): PlayDiagram {
+  const entries = ballEntries(diagram);
+  const entry = entries[index];
+  if (!entry || entry.action === 'snap') return diagram;
+  const min = (entries[index - 1]?.t ?? 0) + BALL_GAP;
+  const max = (entries[index + 1]?.t ?? TIME_LIMIT + BALL_GAP) - BALL_GAP;
+  const clamped = round(Math.min(max, Math.max(min, t)));
+  if (clamped === entry.t) return diagram;
+  return withBall(
+    diagram,
+    entries.map((candidate, i) => (i === index ? { ...candidate, t: clamped } : candidate)),
+  );
+}
+
+/** Quita un cambio de manos y los que venían después (sin él, ya no tienen sentido). */
+export function removeBallEntry(diagram: PlayDiagram, index: number): PlayDiagram {
+  return withBall(diagram, ballEntries(diagram).slice(0, index));
 }

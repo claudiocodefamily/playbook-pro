@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Button } from '../../components/ui/button';
 import { SelectField, TextField } from '../../components/ui/field';
 import { AssignmentPanel } from './AssignmentPanel';
+import { BallSection } from './BallSection';
 import { removePlayer, updatePlayer } from './diagram-ops';
 import { useEditor } from './editor-context';
 
@@ -77,6 +78,7 @@ export function PlayerPanel() {
               }
             }}
           />
+          {player.side === 'O' && <BallSection player={player} />}
           <Button
             variant="secondary"
             className="text-red-700"
