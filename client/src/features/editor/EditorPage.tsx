@@ -20,12 +20,14 @@ import { ErrorAlert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/ui/modal';
 import { PageSpinner } from '../../components/ui/spinner';
-import { useFullscreen } from '../../hooks/useFullscreen';
+import { usePresentation } from '../../hooks/usePresentation';
 import { queries } from '../../lib/api/queries';
 import type { Play } from '../../lib/api/types';
 import { errorText } from '../../lib/errors';
 import { SIDE_LABELS } from '../../lib/labels';
+import { cn } from '../../lib/cn';
 import { FIELD_WIDTH, type FieldWindow, fitWindow } from '../field/geometry';
+import { momentAt } from '../field/moments';
 import { FormationPicker } from '../plays/FormationPicker';
 import {
   addPlayer,
@@ -93,7 +95,9 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
   const [showVersions, setShowVersions] = useState(false);
   const queryClient = useQueryClient();
   const stageRef = useRef<HTMLDivElement>(null);
-  const fullscreen = useFullscreen(stageRef);
+  const presentation = usePresentation(stageRef);
+  // La estela muestra por dónde pasó cada jugador durante la animación.
+  const [showTrails, setShowTrails] = useState(true);
   // La ventana del campo se fija al abrir: si cambiara al arrastrar, la cancha "bailaría".
   const [fieldWindow] = useState<FieldWindow>(() => {
     const fit = fitWindow([
@@ -112,6 +116,18 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
   const aspect = FIELD_WIDTH / (fieldWindow.maxY - fieldWindow.minY);
 
   useKeyboardShortcuts(store, playback);
+
+  // Escape sale del modo presentación cuando el navegador no está a pantalla completa
+  // (si lo está, Escape ya la cierra y el hook se entera).
+  const { active: presenting, exit: exitPresentation } = presentation;
+  useEffect(() => {
+    if (!presenting) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !document.fullscreenElement) void exitPresentation();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [presenting, exitPresentation]);
 
   return (
     <EditorContext value={store}>
@@ -162,39 +178,59 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
         <div className="flex min-w-0 flex-col gap-4 lg:flex-1">
           <div
             ref={stageRef}
-            className="mx-auto flex w-full flex-col gap-2 rounded-3xl bg-turf-900 p-2 sm:p-3"
+            className={cn(
+              'flex flex-col gap-2 bg-turf-900',
+              presenting
+                ? 'fixed inset-0 z-50 overflow-y-auto p-3 sm:p-4'
+                : 'mx-auto w-full rounded-3xl p-2 sm:p-3',
+            )}
             style={{
               // Lo que queda de alto tras la barra de herramientas y la de reproducción.
-              maxWidth: fullscreen.active
-                ? `calc((100dvh - 10rem) * ${aspect})`
-                : `calc((100dvh - 20rem) * ${aspect})`,
+              maxWidth: presenting ? undefined : `calc((100dvh - 20rem) * ${aspect})`,
             }}
           >
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <ToolBar />
-              </div>
-              {fullscreen.supported && (
+            {presenting ? (
+              <PresentationHeader
+                title={play.name}
+                playback={playback}
+                onExit={() => void presentation.exit()}
+              />
+            ) : (
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <ToolBar />
+                </div>
                 <Button
                   variant="secondary"
                   size="icon"
                   className="mt-1 shrink-0"
-                  aria-label={
-                    fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'
-                  }
-                  title={fullscreen.active ? 'Salir del modo presentación' : 'Modo presentación'}
-                  onClick={() => void fullscreen.toggle()}
+                  aria-label="Modo presentación"
+                  title="Modo presentación: pantalla completa para explicar la jugada"
+                  onClick={() => void presentation.enter()}
                 >
-                  {fullscreen.active ? (
-                    <Minimize2 aria-hidden className="size-5" />
-                  ) : (
-                    <Maximize2 aria-hidden className="size-5" />
-                  )}
+                  <Maximize2 aria-hidden className="size-5" />
                 </Button>
-              )}
+              </div>
+            )}
+            <div
+              className="mx-auto w-full"
+              style={presenting ? { maxWidth: `calc((100dvh - 9.5rem) * ${aspect})` } : undefined}
+            >
+              <FieldCanvas
+                ruleset={ruleset}
+                window={fieldWindow}
+                playbackTime={playback.time}
+                showTrails={showTrails}
+              />
             </div>
-            <FieldCanvas ruleset={ruleset} window={fieldWindow} playbackTime={playback.time} />
-            <PlaybackBar playback={playback} />
+            <div className={cn('w-full', presenting && 'mx-auto max-w-4xl')}>
+              <PlaybackBar
+                playback={playback}
+                large={presenting}
+                trails={showTrails}
+                onToggleTrails={() => setShowTrails((value) => !value)}
+              />
+            </div>
           </div>
           <TimelinePanel playback={playback} />
         </div>
@@ -207,6 +243,48 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
         </aside>
       </div>
     </EditorContext>
+  );
+}
+
+/** Cabecera del modo presentación: nombre de la jugada, momento actual y salir. */
+function PresentationHeader({
+  title,
+  playback,
+  onExit,
+}: {
+  title: string;
+  playback: Playback;
+  onExit: () => void;
+}) {
+  const moment = playback.time === null ? null : momentAt(playback.moments, playback.time);
+  return (
+    <div className="flex items-center justify-between gap-3 text-white">
+      <div className="flex min-w-0 items-baseline gap-3">
+        <h2 className="truncate text-xl font-bold sm:text-2xl">{title}</h2>
+        <AnimatePresence mode="wait">
+          {moment && (
+            <motion.span
+              key={moment.label}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              className="shrink-0 rounded-full bg-amber-400 px-3 py-0.5 text-sm font-bold text-amber-950 sm:text-base"
+            >
+              {moment.label}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
+      <Button
+        variant="secondary"
+        onClick={onExit}
+        aria-label="Salir del modo presentación"
+        title="Salir (Esc)"
+      >
+        <Minimize2 aria-hidden className="size-5" />
+        Salir
+      </Button>
+    </div>
   );
 }
 

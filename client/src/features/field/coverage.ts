@@ -67,9 +67,11 @@ function manPosition(
           y: (offset.y / length) * Math.min(length, MAN_CUSHION),
         };
   const settle = Math.min(1, (t - start) / MAN_SETTLE);
+  const y = followed.y + offset.y + (cushion.y - offset.y) * settle;
   return {
     x: followed.x + offset.x + (cushion.x - offset.x) * settle,
-    y: followed.y + offset.y + (cushion.y - offset.y) * settle,
+    // Si juega por delante (off coverage), no se acerca a la LOS: espera al receptor.
+    y: offset.y > 0 ? Math.max(y, defender.y) : y,
   };
 }
 

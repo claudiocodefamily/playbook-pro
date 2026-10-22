@@ -1,17 +1,33 @@
-import { Pause, Play, RotateCcw, SkipBack, SkipForward } from 'lucide-react';
+import { Footprints, Pause, Play, RotateCcw, SkipBack, SkipForward } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
 import { momentAt } from '../field/moments';
 import { PLAYBACK_SPEEDS, type Playback } from './usePlayback';
 
-/** Controles de la animación: reproducir, pausar, mover el reloj a mano y velocidad. */
-export function PlaybackBar({ playback }: { playback: Playback }) {
+interface PlaybackBarProps {
+  playback: Playback;
+  /** Botones más grandes, para el modo presentación. */
+  large?: boolean;
+  trails: boolean;
+  onToggleTrails: () => void;
+}
+
+/**
+ * Controles de la animación: momentos clave, reproducir, mover el reloj a mano, estela
+ * y velocidad.
+ */
+export function PlaybackBar({ playback, large = false, trails, onToggleTrails }: PlaybackBarProps) {
   const { time, playing, range, speed, canPlay } = playback;
   const current = time ?? range.start;
   const moment = time === null ? null : momentAt(playback.moments, time);
 
   return (
-    <div className="flex items-center gap-2 rounded-2xl bg-black/25 p-1.5 text-white">
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-black/25 p-1.5 text-white sm:flex-nowrap',
+        large && '[&_button]:min-h-13 [&_button]:min-w-13 [&_svg]:size-6',
+      )}
+    >
       <Button
         size="icon"
         variant="ghost"
@@ -62,7 +78,7 @@ export function PlaybackBar({ playback }: { playback: Playback }) {
       <input
         type="range"
         aria-label="Momento de la jugada"
-        className="h-11 min-w-0 flex-1 accent-white"
+        className="order-last h-9 min-w-0 basis-full accent-white sm:order-none sm:h-11 sm:flex-1 sm:basis-auto"
         min={range.start}
         max={range.end}
         step={0.05}
@@ -71,7 +87,7 @@ export function PlaybackBar({ playback }: { playback: Playback }) {
         onChange={(event) => playback.seek(Number(event.target.value))}
       />
       <span
-        className="min-w-14 text-right text-sm leading-tight font-semibold tabular-nums"
+        className="ml-auto min-w-14 text-right text-sm leading-tight font-semibold tabular-nums sm:ml-0"
         aria-live="polite"
       >
         {moment && moment.label !== 'Snap' && (
@@ -79,6 +95,19 @@ export function PlaybackBar({ playback }: { playback: Playback }) {
         )}
         {formatTime(current)}
       </span>
+      <Button
+        size="icon"
+        variant="ghost"
+        className={cn('hover:bg-white/10', trails ? 'text-amber-300' : 'text-white/60')}
+        aria-pressed={trails}
+        aria-label="Estela"
+        title={
+          trails ? 'Ocultar la estela de los jugadores' : 'Mostrar por dónde pasa cada jugador'
+        }
+        onClick={onToggleTrails}
+      >
+        <Footprints aria-hidden className="size-5" />
+      </Button>
       <div className="flex rounded-xl bg-white/10 p-0.5" role="group" aria-label="Velocidad">
         {PLAYBACK_SPEEDS.map((option) => (
           <button

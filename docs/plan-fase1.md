@@ -886,9 +886,12 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 
 - Bloque 4: editor web. Login y registro, equipos, playbooks y jugadas con búsqueda. Cancha Konva con drag & drop, formaciones propias y del rival, deshacer/rehacer y autoguardado. Dibujo de rutas, bloqueos, motion y blitz arrastrando desde el jugador, con estilos y nombres del route tree. Animación de la jugada (play, pausa, ½x y barra de tiempo) para explicarla en la sesión. "Guardar versión" e historial con vista previa y "Volver a esta versión".
 
+- Fase 2 (animación): balón animado (snap, handoff, pitch y pase al punto de recepción), línea de tiempo editable con momentos clave y paso a paso, defensa que reacciona (man y zona) y modo presentación con estela.
+
 **Sigue**
 
-- Cierre de la Fase 1: repasar el plan contra lo hecho y decidir la Fase 2.
+- Pantallas de coaches y roster (la API ya existe desde el bloque 2).
+- Fase 3: coaching (notas, glosario de conceptos, modo jugador, links para compartir y cuentas de jugadores).
 
 **Decisiones pendientes**
 
