@@ -1,6 +1,7 @@
 import type { Drawing, PlayDiagram } from '@playbook/shared';
 import { createStore } from 'zustand/vanilla';
 import type { CoverageType, DrawType } from './diagram-ops';
+import type { Focus } from './focus';
 
 /** Pasos que se pueden deshacer. Cada uno es una copia del diagram (unos pocos KB). */
 export const HISTORY_LIMIT = 100;
@@ -21,6 +22,8 @@ export interface EditorState {
    * asignan la cobertura de un defensor; "pencil" y "eraser" rayan libremente sobre la cancha.
    */
   tool: 'move' | DrawType | CoverageType | SketchTool;
+  /** Modo jugador: a quién se resalta en la cancha (un jugador o una posición). */
+  focus: Focus;
   /** Color con el que pinta el lápiz. */
   pencilColor: Drawing['color'];
   /** true si hay cambios que aún no se guardaron en la API. */
@@ -34,6 +37,7 @@ export interface EditorState {
   selectAssignment: (assignmentId: string | null) => void;
   setTool: (tool: EditorState['tool']) => void;
   setPencilColor: (color: Drawing['color']) => void;
+  setFocus: (focus: Focus) => void;
   /** Tras guardar en la API: el diagram en pantalla ya está guardado. */
   markSaved: (saved: PlayDiagram) => void;
 }
@@ -48,6 +52,7 @@ export function createEditorStore(initial: PlayDiagram) {
     selectedId: null,
     selectedAssignmentId: null,
     tool: 'move',
+    focus: null,
     pencilColor: 'yellow',
     dirty: false,
 
@@ -101,6 +106,7 @@ export function createEditorStore(initial: PlayDiagram) {
       set({ selectedAssignmentId: assignmentId, selectedId: null }),
     setTool: (tool) => set({ tool }),
     setPencilColor: (pencilColor) => set({ pencilColor, tool: 'pencil' }),
+    setFocus: (focus) => set({ focus }),
 
     // Si el coach siguió editando mientras se guardaba, sigue habiendo cambios pendientes.
     markSaved: (saved) => set({ dirty: get().diagram !== saved }),
