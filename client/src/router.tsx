@@ -12,6 +12,7 @@ import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SharedPlaybookPage } from './features/shared/SharedPlaybookPage';
+import { JoinPage } from './features/join/JoinPage';
 
 export const router = createBrowserRouter([
   {
@@ -32,6 +33,8 @@ export const router = createBrowserRouter([
   },
   // Público: lo abre cualquiera con el link, sin cuenta.
   { path: '/shared/:token', element: <SharedPlaybookPage /> },
+  // Invitación de un jugador: se ve sin sesión; para aceptarla hay que entrar.
+  { path: '/join/:token', element: <JoinPage /> },
   {
     element: (
       <RequireAuth>

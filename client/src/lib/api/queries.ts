@@ -5,6 +5,7 @@ import {
   conceptsApi,
   formationsApi,
   playbooksApi,
+  playerAccountsApi,
   type PlayFilters,
   playsApi,
   type RosterInput,
@@ -35,6 +36,23 @@ export const queries = {
     queryOptions({
       queryKey: ['teams', teamId, 'concepts'],
       queryFn: () => conceptsApi.list(teamId),
+    }),
+  me: (teamId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'me'],
+      queryFn: () => playerAccountsApi.me(teamId),
+    }),
+  playerAccess: (teamId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'player-accounts'],
+      queryFn: () => playerAccountsApi.list(teamId),
+      // Cambia cuando el jugador acepta en su móvil: se vuelve a pedir al abrir la pantalla.
+      staleTime: 0,
+    }),
+  invite: (token: string) =>
+    queryOptions({
+      queryKey: ['invites', token],
+      queryFn: () => playerAccountsApi.preview(token),
     }),
   shareLinks: (teamId: string, playbookId: string) =>
     queryOptions({
@@ -250,5 +268,51 @@ export function useRevokeShareLink(teamId: string, playbookId: string) {
   return useMutation({
     mutationFn: (linkId: string) => shareLinksApi.revoke(teamId, playbookId, linkId),
     onSuccess: changed,
+  });
+}
+
+export function useUpdatePlaybook(teamId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      playbookId,
+      input,
+    }: {
+      playbookId: string;
+      input: Parameters<typeof playbooksApi.update>[2];
+    }) => playbooksApi.update(teamId, playbookId, input),
+    onSuccess: (playbook) => {
+      client.setQueryData(queries.playbook(teamId, playbook.id).queryKey, playbook);
+      void client.invalidateQueries({ queryKey: queries.playbooks(teamId).queryKey });
+    },
+  });
+}
+
+function usePlayerAccessChanged(teamId: string) {
+  const client = useQueryClient();
+  return () => client.invalidateQueries({ queryKey: queries.playerAccess(teamId).queryKey });
+}
+
+export function useInvitePlayer(teamId: string) {
+  const changed = usePlayerAccessChanged(teamId);
+  return useMutation({
+    mutationFn: (rosterPlayerId: string) => playerAccountsApi.invite(teamId, rosterPlayerId),
+    onSuccess: changed,
+  });
+}
+
+export function useRemovePlayerAccess(teamId: string) {
+  const changed = usePlayerAccessChanged(teamId);
+  return useMutation({
+    mutationFn: (rosterPlayerId: string) => playerAccountsApi.remove(teamId, rosterPlayerId),
+    onSuccess: changed,
+  });
+}
+
+export function useAcceptInvite() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => playerAccountsApi.accept(token),
+    onSuccess: () => client.invalidateQueries({ queryKey: queries.teams().queryKey }),
   });
 }

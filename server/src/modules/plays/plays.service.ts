@@ -11,7 +11,7 @@ import {
 import type { ClientSession, Connection, Model } from 'mongoose';
 import { ConceptsService } from '../concepts/concepts.service.js';
 import { FormationsService } from '../formations/formations.service.js';
-import { PlaybooksService } from '../playbooks/playbooks.service.js';
+import { PlaybooksService, type Visibility } from '../playbooks/playbooks.service.js';
 import type { CreatePlayDto } from './dto/create-play.dto.js';
 import type { DuplicatePlayDto } from './dto/duplicate-play.dto.js';
 import type { ListPlaysQueryDto } from './dto/list-plays-query.dto.js';
@@ -78,8 +78,9 @@ export class PlaysService {
     teamId: string,
     playbookId: string,
     query: ListPlaysQueryDto,
+    visibility: Visibility = {},
   ): Promise<PlayDocument[]> {
-    await this.playbooks.findOne(teamId, playbookId);
+    await this.playbooks.findOne(teamId, playbookId, visibility);
     return this.playModel
       .find({
         teamId,
@@ -93,10 +94,20 @@ export class PlaysService {
       .exec();
   }
 
-  async findOne(teamId: string, playId: string): Promise<PlayDocument> {
+  /** Con `playersOnly`, solo si su playbook es visible para jugadores. */
+  async findOne(
+    teamId: string,
+    playId: string,
+    visibility: Visibility = {},
+  ): Promise<PlayDocument> {
     const play = await this.playModel.findOne({ _id: playId, teamId, deletedAt: null }).exec();
     if (!play) {
       throw new NotFoundException(PLAY_NOT_FOUND);
+    }
+    if (visibility.playersOnly) {
+      await this.playbooks.findOne(teamId, play.playbookId, visibility).catch(() => {
+        throw new NotFoundException(PLAY_NOT_FOUND);
+      });
     }
     return play;
   }

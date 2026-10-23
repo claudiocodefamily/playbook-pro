@@ -10,6 +10,7 @@ import { ErrorAlert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { EmptyState } from '../../components/ui/empty-state';
 import { PageSpinner, Spinner } from '../../components/ui/spinner';
+import { useTeamRole } from '../../hooks/useTeamRole';
 import { queries } from '../../lib/api/queries';
 import type { Concept } from '../../lib/api/types';
 import { cn } from '../../lib/cn';
@@ -30,6 +31,8 @@ export function GlossaryPage() {
   const [filter, setFilter] = useState<PlaybookSide | 'all'>('all');
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState<ConceptDraft | null>(null);
+  // Los jugadores leen el glosario pero no lo cambian.
+  const { isCoach } = useTeamRole(teamId);
 
   const query = normalize(search.trim());
   const visible = (concepts.data ?? []).filter(
@@ -52,7 +55,7 @@ export function GlossaryPage() {
         title={team.data?.name ?? 'Equipo'}
         subtitle="Glosario del equipo"
         back={{ to: '/', label: 'Mis equipos' }}
-        actions={addButton}
+        actions={isCoach && addButton}
       />
       <TeamNav teamId={teamId} />
 
@@ -106,8 +109,12 @@ export function GlossaryPage() {
         <EmptyState
           icon={BookMarked}
           title="Ningún concepto coincide"
-          description="Prueba con otra palabra o cambia la unidad. Si es un concepto vuestro, añádelo al glosario."
-          action={addButton}
+          description={
+            isCoach
+              ? 'Prueba con otra palabra o cambia la unidad. Si es un concepto vuestro, añádelo al glosario.'
+              : 'Prueba con otra palabra o cambia la unidad.'
+          }
+          action={isCoach && addButton}
         />
       ) : (
         <motion.ul layout className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -123,6 +130,7 @@ export function GlossaryPage() {
                 <ConceptCard
                   teamId={teamId}
                   concept={concept}
+                  canEdit={isCoach}
                   onEdit={() => setDraft({ concept })}
                   onCopy={() =>
                     setDraft({
@@ -148,11 +156,13 @@ export function GlossaryPage() {
 function ConceptCard({
   teamId,
   concept,
+  canEdit,
   onEdit,
   onCopy,
 }: {
   teamId: string;
   concept: Concept;
+  canEdit: boolean;
   onEdit: () => void;
   onCopy: () => void;
 }) {
@@ -173,7 +183,7 @@ function ConceptCard({
             )}
           </p>
         </div>
-        {concept.isGlobal ? (
+        {!canEdit ? null : concept.isGlobal ? (
           <Button
             variant="ghost"
             size="icon"
@@ -198,7 +208,7 @@ function ConceptCard({
       <p className="text-sm leading-relaxed whitespace-pre-line text-slate-700">
         {concept.explanation}
       </p>
-      {concept.playCount > 0 ? (
+      {!canEdit ? null : concept.playCount > 0 ? (
         <div>
           <button
             type="button"

@@ -1,4 +1,3 @@
-import type { Ruleset } from '@playbook/shared';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Eye, LinkIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -12,17 +11,8 @@ import type { SharedPlaybook } from '../../lib/api/types';
 import { cn } from '../../lib/cn';
 import { errorText } from '../../lib/errors';
 import { SIDE_LABELS } from '../../lib/labels';
-import { EditorContext } from '../editor/editor-context';
-import { createEditorStore } from '../editor/editor-store';
-import { FieldCanvas } from '../editor/FieldCanvas';
-import { FocusBar } from '../editor/FocusBar';
-import { NotesAside } from '../editor/NotesPanel';
-import { PlaybackBar } from '../editor/PlaybackBar';
-import { usePlayback } from '../editor/usePlayback';
-import { diagramReach, diagramWindow, FIELD_WIDTH } from '../field/geometry';
 import { SIDE_STYLE } from '../playbooks/side-style';
-
-type SharedPlay = SharedPlaybook['plays'][number];
+import { PlayViewer } from './PlayViewer';
 
 /**
  * Lo que ve quien abre un link compartido, sin cuenta: las jugadas del playbook animadas,
@@ -162,66 +152,17 @@ function SharedPlaybookView({
           </div>
 
           {/* key: cada jugada tiene su propia reproducción y su modo jugador. */}
-          <SharedPlayViewer
+          <PlayViewer
             key={play.id}
-            play={play}
+            diagram={play.diagram}
             ruleset={playbook.ruleset}
-            concepts={playbook.concepts}
+            concepts={play.conceptIds.flatMap((id) => {
+              const concept = playbook.concepts.find((candidate) => candidate.id === id);
+              return concept ? [concept] : [];
+            })}
           />
         </>
       )}
     </div>
-  );
-}
-
-/** Una jugada animada, sin herramientas de edición. */
-function SharedPlayViewer({
-  play,
-  ruleset,
-  concepts,
-}: {
-  play: SharedPlay;
-  ruleset: Ruleset;
-  concepts: SharedPlaybook['concepts'];
-}) {
-  const [store] = useState(() => createEditorStore(play.diagram));
-  const playback = usePlayback(store);
-  const [showTrails, setShowTrails] = useState(true);
-  const [fieldWindow] = useState(() => {
-    const base = diagramWindow(play.diagram);
-    return { ...base, maxY: Math.max(base.maxY, diagramReach(play.diagram)) };
-  });
-  const aspect = FIELD_WIDTH / (fieldWindow.maxY - fieldWindow.minY);
-  const linked = play.conceptIds.flatMap((id) => {
-    const concept = concepts.find((candidate) => candidate.id === id);
-    return concept ? [concept] : [];
-  });
-
-  return (
-    <EditorContext value={store}>
-      <div className="flex flex-col gap-3 rounded-3xl bg-turf-900 p-2 sm:p-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:justify-center">
-          <div
-            className="mx-auto w-full lg:mx-0"
-            style={{ maxWidth: `calc((100dvh - 16rem) * ${aspect})` }}
-          >
-            <FieldCanvas
-              ruleset={ruleset}
-              window={fieldWindow}
-              playbackTime={playback.time}
-              showTrails={showTrails}
-              readOnly
-            />
-          </div>
-          <NotesAside notes={play.diagram.notes} concepts={linked} />
-        </div>
-        <PlaybackBar
-          playback={playback}
-          trails={showTrails}
-          onToggleTrails={() => setShowTrails((value) => !value)}
-        />
-        <FocusBar />
-      </div>
-    </EditorContext>
   );
 }

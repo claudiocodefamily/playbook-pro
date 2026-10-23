@@ -20,6 +20,10 @@ export class Playbook {
   @Prop({ type: String, default: '', maxlength: 2000 })
   description!: string;
 
+  // Los jugadores con cuenta solo ven los playbooks que el coach hace visibles.
+  @Prop({ type: Boolean, default: false })
+  visibleToPlayers!: boolean;
+
   // Borrado lógico: el playbook y sus jugadas se ocultan pero no se pierden.
   @Prop({ type: Date, default: null })
   deletedAt!: Date | null;

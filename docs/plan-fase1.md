@@ -940,9 +940,16 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - La página `/shared/:token` reutiliza la cancha del editor en modo `readOnly`, con la animación, las estelas, el modo jugador, las notas y los conceptos.
 - Por ahora se comparte el playbook entero. En vez de `targetType`/`targetId`, una jugada suelta se comparte poniéndola en su propio playbook; si hace falta, se añade después sin romper los links.
 
+**6e. Cuentas de jugadores** (hecho): rol `PLAYER` en `teams.members`, unido a su ficha del roster (`rosterPlayerId`).
+
+- En la ficha del roster, el coach pulsa "Invitar a crear su cuenta" y obtiene un link `/join/:token` de un solo uso que caduca en 14 días. El token es secreto (`crypto.randomBytes`) y se guarda como hash en `player_invites`. Una invitación nueva anula la anterior.
+- El jugador abre el link, crea su cuenta o entra con la suya, y acepta. La invitación se marca como usada en la misma operación que la comprueba. No puede usarla quien ya es del equipo, ni sirve para una ficha que ya tiene cuenta.
+- Permisos: `TeamAccessGuard` solo deja pasar a coaches, salvo en las rutas con `@AllowPlayers()` (leer el equipo, los playbooks, las jugadas, el glosario y `GET /teams/:teamId/me`). Las de playbooks y jugadas solo devuelven los playbooks con `visibleToPlayers: true`, que el coach activa con el botón "Oculto a jugadores / Lo ven los jugadores".
+- El jugador ve las jugadas sin herramientas (el mismo visor que los links compartidos), con el modo jugador puesto en su posición del roster.
+- El coach quita el acceso desde la ficha; borrar la ficha también lo quita. La lista de coaches no incluye a los jugadores, y un equipo nunca se queda sin coach.
+
 **Sigue**
 
-- Fase 3: cuentas de jugadores.
 - Fase 4: exportar a PNG/PDF, quizzes y game plan.
 
 **Decisiones pendientes**

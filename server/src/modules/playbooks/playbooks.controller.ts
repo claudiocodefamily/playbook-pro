@@ -14,12 +14,19 @@ import {
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { AllowPlayers } from '../../common/decorators/allow-players.decorator.js';
+import {
+  isPlayer,
+  Membership,
+  type TeamMembership,
+} from '../../common/decorators/team-member.decorator.js';
 import { TeamAccessGuard } from '../../common/guards/team-access.guard.js';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe.js';
 import { CreatePlaybookDto } from './dto/create-playbook.dto.js';
@@ -33,8 +40,9 @@ import type { PlaybookDocument } from './schemas/playbook.schema.js';
 @ApiBearerAuth()
 @UseGuards(TeamAccessGuard)
 @ApiNotFoundResponse({
-  description: 'El equipo o el playbook no existen, o no eres coach del equipo',
+  description: 'El equipo o el playbook no existen, o no eres del equipo',
 })
+@ApiForbiddenResponse({ description: 'Solo los coaches del equipo pueden hacer esto' })
 @Controller('teams/:teamId/playbooks')
 export class PlaybooksController {
   constructor(private readonly playbooks: PlaybooksService) {}
@@ -50,13 +58,20 @@ export class PlaybooksController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista los playbooks del equipo, con su número de jugadas' })
+  @AllowPlayers()
+  @ApiOperation({
+    summary: 'Lista los playbooks del equipo, con su número de jugadas',
+    description: 'Un jugador solo recibe los visibles para jugadores.',
+  })
   @ApiOkResponse({ type: [PlaybookResponseDto] })
   async findAll(
     @Param('teamId', ParseUuidPipe) teamId: string,
     @Query() query: ListPlaybooksQueryDto,
+    @Membership() membership: TeamMembership,
   ): Promise<PlaybookResponseDto[]> {
-    const playbooks = await this.playbooks.findAll(teamId, query.side);
+    const playbooks = await this.playbooks.findAll(teamId, query.side, {
+      playersOnly: isPlayer(membership),
+    });
     const counts = await this.playbooks.countPlays(
       teamId,
       playbooks.map((playbook) => playbook._id),
@@ -67,17 +82,24 @@ export class PlaybooksController {
   }
 
   @Get(':playbookId')
+  @AllowPlayers()
   @ApiOperation({ summary: 'Devuelve un playbook' })
   @ApiOkResponse({ type: PlaybookResponseDto })
   async findOne(
     @Param('teamId', ParseUuidPipe) teamId: string,
     @Param('playbookId', ParseUuidPipe) playbookId: string,
+    @Membership() membership: TeamMembership,
   ): Promise<PlaybookResponseDto> {
-    return this.withCount(teamId, await this.playbooks.findOne(teamId, playbookId));
+    const playbook = await this.playbooks.findOne(teamId, playbookId, {
+      playersOnly: isPlayer(membership),
+    });
+    return this.withCount(teamId, playbook);
   }
 
   @Patch(':playbookId')
-  @ApiOperation({ summary: 'Edita el nombre, la unidad o la descripción de un playbook' })
+  @ApiOperation({
+    summary: 'Edita el nombre, la unidad, la descripción o si lo ven los jugadores',
+  })
   @ApiOkResponse({ type: PlaybookResponseDto })
   async update(
     @Param('teamId', ParseUuidPipe) teamId: string,

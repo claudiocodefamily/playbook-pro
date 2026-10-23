@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { useAuth } from '../auth/auth-context';
 import { ErrorAlert } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
@@ -8,6 +8,7 @@ import { AuthLayout } from '../layouts/AuthLayout';
 import { errorText } from '../lib/errors';
 
 export function LoginPage() {
+  const location = useLocation();
   const { login } = useAuth();
   const [error, setError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
@@ -45,6 +46,8 @@ export function LoginPage() {
         ¿Aún no tienes cuenta?{' '}
         <Link
           to="/register"
+          // Conserva a dónde volver (por ejemplo, una invitación) al cambiar de login a registro.
+          state={location.state as unknown}
           className="font-semibold text-turf-700 dark:text-turf-300 hover:underline"
         >
           Regístrate

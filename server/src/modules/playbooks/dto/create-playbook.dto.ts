@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PLAYBOOK_SIDES, type PlaybookSide } from '@playbook/shared';
 import { Transform } from 'class-transformer';
-import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreatePlaybookDto {
   @ApiProperty({ example: 'Ofensiva 2026', maxLength: 100 })
@@ -20,4 +20,12 @@ export class CreatePlaybookDto {
   @IsString()
   @MaxLength(2000)
   description?: string;
+
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Si los jugadores con cuenta pueden ver el playbook',
+  })
+  @IsOptional()
+  @IsBoolean()
+  visibleToPlayers?: boolean;
 }

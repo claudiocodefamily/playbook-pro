@@ -13,6 +13,7 @@ import type { RosterPlayer } from '../../lib/api/types';
 import { cn } from '../../lib/cn';
 import { errorText } from '../../lib/errors';
 import { PlayerAvatar } from './PlayerAvatar';
+import { PlayerAccessSection } from './PlayerAccessSection';
 
 interface RosterPlayerModalProps {
   teamId: string;
@@ -33,6 +34,13 @@ export function RosterPlayerModal(props: RosterPlayerModalProps) {
     >
       {/* key: el formulario empieza de cero con cada jugador. */}
       <RosterPlayerForm key={props.player?.id ?? 'new'} {...props} />
+      {props.player && (
+        <PlayerAccessSection
+          key={`access-${props.player.id}`}
+          teamId={props.teamId}
+          player={props.player}
+        />
+      )}
     </Modal>
   );
 }

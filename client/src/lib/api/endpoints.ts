@@ -2,6 +2,9 @@ import type { PlayDiagram, PlaybookSide, Ruleset } from '@playbook/shared';
 import { api } from './client';
 import type {
   AuthResponse,
+  InvitePreview,
+  PlayerAccess,
+  PlayerInvite,
   Concept,
   Formation,
   Play,
@@ -13,6 +16,7 @@ import type {
   SharedPlaybook,
   ShareLink,
   Team,
+  TeamMe,
   TeamMember,
   UploadSignature,
   User,
@@ -133,6 +137,15 @@ export const playbooksApi = {
     api.request<Playbook>(`/teams/${teamId}/playbooks/${playbookId}`),
   create: (teamId: string, input: { name: string; side: PlaybookSide; description?: string }) =>
     api.request<Playbook>(`/teams/${teamId}/playbooks`, { method: 'POST', ...json(input) }),
+  update: (
+    teamId: string,
+    playbookId: string,
+    input: Partial<{ name: string; description: string; visibleToPlayers: boolean }>,
+  ) =>
+    api.request<Playbook>(`/teams/${teamId}/playbooks/${playbookId}`, {
+      method: 'PATCH',
+      ...json(input),
+    }),
   remove: (teamId: string, playbookId: string) =>
     api.request<void>(`/teams/${teamId}/playbooks/${playbookId}`, { method: 'DELETE' }),
 };
@@ -211,5 +224,25 @@ export const shareLinksApi = {
   open: (token: string) =>
     api.request<SharedPlaybook>(`/shared/${encodeURIComponent(token)}`, {
       retryOnUnauthorized: false,
+    }),
+};
+
+export const playerAccountsApi = {
+  me: (teamId: string) => api.request<TeamMe>(`/teams/${teamId}/me`),
+  list: (teamId: string) => api.request<PlayerAccess[]>(`/teams/${teamId}/player-accounts`),
+  invite: (teamId: string, rosterPlayerId: string) =>
+    api.request<PlayerInvite>(`/teams/${teamId}/roster/${rosterPlayerId}/invite`, {
+      method: 'POST',
+    }),
+  remove: (teamId: string, rosterPlayerId: string) =>
+    api.request<void>(`/teams/${teamId}/player-accounts/${rosterPlayerId}`, { method: 'DELETE' }),
+  /** Público: no necesita sesión. */
+  preview: (token: string) =>
+    api.request<InvitePreview>(`/invites/${encodeURIComponent(token)}`, {
+      retryOnUnauthorized: false,
+    }),
+  accept: (token: string) =>
+    api.request<{ teamId: string }>(`/invites/${encodeURIComponent(token)}/accept`, {
+      method: 'POST',
     }),
 };

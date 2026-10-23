@@ -1,6 +1,6 @@
 import { createEmptyDiagram, newId, type PlayDiagram } from '@playbook/shared';
 import { describe, expect, it } from 'vitest';
-import { describeAssignments, focusedIds, positionFocus } from './focus';
+import { describeAssignments, focusedIds, focusForPositions, positionFocus } from './focus';
 
 const QB = newId();
 const X = newId();
@@ -72,6 +72,18 @@ describe('focusedIds', () => {
   it('si el jugador ya no está, vuelve a enseñar a todos', () => {
     expect(focusedIds(play(), newId())).toBeNull();
     expect(focusedIds(play(), positionFocus('TE'))).toBeNull();
+  });
+});
+
+describe('focusForPositions', () => {
+  it('elige la primera posición del jugador que está en la jugada', () => {
+    expect(focusForPositions(play(), ['TE', 'WR'])).toBe(positionFocus('WR'));
+    expect(focusForPositions(play(), ['OL', 'WR'])).toBe(positionFocus('OL'));
+  });
+
+  it('si no juega en la jugada, enseña a todos', () => {
+    expect(focusForPositions(play(), ['K'])).toBeNull();
+    expect(focusForPositions(play(), [])).toBeNull();
   });
 });
 

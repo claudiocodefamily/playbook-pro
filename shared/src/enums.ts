@@ -2,8 +2,11 @@
 export const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S', 'K', 'P'] as const;
 export type Position = (typeof POSITIONS)[number];
 
-/** Rol dentro de un equipo. En la Fase 1 solo existe COACH; PLAYER llegará en la Fase 3. */
-export const TEAM_ROLES = ['COACH'] as const;
+/**
+ * Rol dentro de un equipo. COACH lo puede todo; PLAYER entra con una invitación del coach
+ * y solo mira los playbooks que el coach hace visibles.
+ */
+export const TEAM_ROLES = ['COACH', 'PLAYER'] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
 
 /** Unidad a la que pertenece un playbook o una formación. */

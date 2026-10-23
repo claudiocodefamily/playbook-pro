@@ -5,6 +5,7 @@ import { toMongoUpdate, withoutNullish } from '../../common/utils/mongo-update.j
 import type { CreateRosterPlayerDto } from './dto/create-roster-player.dto.js';
 import type { ListRosterQueryDto } from './dto/list-roster-query.dto.js';
 import type { UpdateRosterPlayerDto } from './dto/update-roster-player.dto.js';
+import { TeamsService } from '../teams/teams.service.js';
 import { RosterPlayer, type RosterPlayerDocument } from './schemas/roster-player.schema.js';
 
 const PLAYER_NOT_FOUND = 'Jugador no encontrado';
@@ -12,7 +13,10 @@ const PLAYER_NOT_FOUND = 'Jugador no encontrado';
 /** Todos los métodos reciben `teamId` y lo incluyen en el filtro: un equipo nunca ve el roster de otro. */
 @Injectable()
 export class RosterService {
-  constructor(@InjectModel(RosterPlayer.name) private readonly playerModel: Model<RosterPlayer>) {}
+  constructor(
+    @InjectModel(RosterPlayer.name) private readonly playerModel: Model<RosterPlayer>,
+    private readonly teams: TeamsService,
+  ) {}
 
   create(teamId: string, dto: CreateRosterPlayerDto): Promise<RosterPlayerDocument> {
     return this.playerModel.create({ ...withoutNullish(dto), teamId });
@@ -55,5 +59,7 @@ export class RosterService {
     if (result.deletedCount === 0) {
       throw new NotFoundException(PLAYER_NOT_FOUND);
     }
+    // Si tenía cuenta, pierde el acceso al equipo junto con su ficha.
+    await this.teams.removePlayer(teamId, playerId);
   }
 }

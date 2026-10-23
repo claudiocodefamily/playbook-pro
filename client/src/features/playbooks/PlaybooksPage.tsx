@@ -1,6 +1,6 @@
 import { PLAYBOOK_SIDES, type PlaybookSide } from '@playbook/shared';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Eye, Plus, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -13,6 +13,7 @@ import { EmptyState } from '../../components/ui/empty-state';
 import { SelectField, TextField } from '../../components/ui/field';
 import { Modal } from '../../components/ui/modal';
 import { PageSpinner } from '../../components/ui/spinner';
+import { useTeamRole } from '../../hooks/useTeamRole';
 import { queries, useCreatePlaybook, useDeletePlaybook } from '../../lib/api/queries';
 import type { Playbook } from '../../lib/api/types';
 import { cn } from '../../lib/cn';
@@ -30,6 +31,7 @@ export function PlaybooksPage() {
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Playbook | null>(null);
   const deletePlaybook = useDeletePlaybook(teamId);
+  const { isCoach } = useTeamRole(teamId);
 
   const visible = (playbooks.data ?? []).filter(
     (playbook) => filter === 'all' || playbook.side === filter,
@@ -47,7 +49,7 @@ export function PlaybooksPage() {
         title={team.data?.name ?? 'Equipo'}
         subtitle="Playbooks del equipo"
         back={{ to: '/', label: 'Mis equipos' }}
-        actions={createButton}
+        actions={isCoach && createButton}
       />
       <TeamNav teamId={teamId} />
 
@@ -89,8 +91,12 @@ export function PlaybooksPage() {
               ? 'Aún no hay playbooks'
               : `No hay playbooks de ${SIDE_LABELS[filter].toLowerCase()}`
           }
-          description="Un playbook agrupa las jugadas de una unidad: por ejemplo, la ofensiva de la temporada o la defensa de red zone."
-          action={createButton}
+          description={
+            isCoach
+              ? 'Un playbook agrupa las jugadas de una unidad: por ejemplo, la ofensiva de la temporada o la defensa de red zone.'
+              : 'Cuando el coach comparta un playbook con los jugadores, aparecerá aquí.'
+          }
+          action={isCoach && createButton}
         />
       ) : (
         <motion.ul layout className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -106,7 +112,10 @@ export function PlaybooksPage() {
               >
                 <Link
                   to={`/teams/${teamId}/playbooks/${playbook.id}`}
-                  className="flex h-full flex-col gap-3 rounded-3xl bg-surface p-5 pr-16 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
+                  className={cn(
+                    'flex h-full flex-col gap-3 rounded-3xl bg-surface p-5 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]',
+                    isCoach && 'pr-16',
+                  )}
                 >
                   <span
                     className={cn(
@@ -122,19 +131,27 @@ export function PlaybooksPage() {
                       {playbook.description}
                     </span>
                   )}
-                  <span className="mt-auto text-sm font-medium text-slate-500">
+                  <span className="mt-auto flex items-center justify-between gap-2 text-sm font-medium text-slate-500">
                     {playbook.playCount} {playbook.playCount === 1 ? 'jugada' : 'jugadas'}
+                    {isCoach && playbook.visibleToPlayers && (
+                      <span className="inline-flex items-center gap-1 text-xs text-turf-700 dark:text-turf-300">
+                        <Eye aria-hidden className="size-3.5" />
+                        Lo ven los jugadores
+                      </span>
+                    )}
                   </span>
                 </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-3 right-3 text-slate-400 hover:text-red-600"
-                  aria-label={`Borrar ${playbook.name}`}
-                  onClick={() => setDeleting(playbook)}
-                >
-                  <Trash2 aria-hidden className="size-5" />
-                </Button>
+                {isCoach && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-3 right-3 text-slate-400 hover:text-red-600"
+                    aria-label={`Borrar ${playbook.name}`}
+                    onClick={() => setDeleting(playbook)}
+                  >
+                    <Trash2 aria-hidden className="size-5" />
+                  </Button>
+                )}
               </motion.li>
             ))}
           </AnimatePresence>

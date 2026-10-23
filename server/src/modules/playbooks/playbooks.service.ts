@@ -10,6 +10,14 @@ import { Playbook, type PlaybookDocument } from './schemas/playbook.schema.js';
 
 const PLAYBOOK_NOT_FOUND = 'Playbook no encontrado';
 
+/** Qué playbooks puede ver quien pregunta: un jugador, solo los visibles para jugadores. */
+export interface Visibility {
+  playersOnly?: boolean;
+}
+
+const visibilityFilter = ({ playersOnly = false }: Visibility) =>
+  playersOnly ? { visibleToPlayers: true } : {};
+
 /** Todos los métodos filtran por `teamId` y ignoran los playbooks borrados. */
 @Injectable()
 export class PlaybooksService {
@@ -23,16 +31,24 @@ export class PlaybooksService {
     return this.playbookModel.create({ ...withoutNullish(dto), teamId });
   }
 
-  findAll(teamId: string, side?: PlaybookSide): Promise<PlaybookDocument[]> {
+  findAll(
+    teamId: string,
+    side?: PlaybookSide,
+    visibility: Visibility = {},
+  ): Promise<PlaybookDocument[]> {
     return this.playbookModel
-      .find({ teamId, deletedAt: null, ...(side ? { side } : {}) })
+      .find({ teamId, deletedAt: null, ...(side ? { side } : {}), ...visibilityFilter(visibility) })
       .sort({ side: 1, name: 1 })
       .exec();
   }
 
-  async findOne(teamId: string, playbookId: string): Promise<PlaybookDocument> {
+  async findOne(
+    teamId: string,
+    playbookId: string,
+    visibility: Visibility = {},
+  ): Promise<PlaybookDocument> {
     const playbook = await this.playbookModel
-      .findOne({ _id: playbookId, teamId, deletedAt: null })
+      .findOne({ _id: playbookId, teamId, deletedAt: null, ...visibilityFilter(visibility) })
       .exec();
     if (!playbook) {
       throw new NotFoundException(PLAYBOOK_NOT_FOUND);

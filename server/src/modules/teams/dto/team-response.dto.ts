@@ -3,7 +3,7 @@ import { RULESETS, type Ruleset, TEAM_ROLES, type TeamRole } from '@playbook/sha
 import type { UserDocument } from '../../users/schemas/user.schema.js';
 import type { TeamDocument, TeamMember } from '../schemas/team.schema.js';
 
-/** Un coach del equipo, con los datos de su cuenta para poder mostrarlo en pantalla. */
+/** Un miembro del equipo, con los datos de su cuenta para poder mostrarlo en pantalla. */
 export class TeamMemberResponseDto {
   @ApiProperty({ format: 'uuid' })
   userId!: string;
@@ -47,19 +47,23 @@ export class TeamResponseDto {
   @ApiProperty({ example: 2, description: 'Número de coaches del equipo' })
   memberCount!: number;
 
+  @ApiProperty({ enum: TEAM_ROLES, description: 'Mi rol en el equipo' })
+  myRole!: TeamRole;
+
   @ApiProperty()
   createdAt!: Date;
 
   @ApiProperty()
   updatedAt!: Date;
 
-  static from(team: TeamDocument): TeamResponseDto {
+  static from(team: TeamDocument, userId: string): TeamResponseDto {
     const dto = new TeamResponseDto();
     dto.id = team._id;
     dto.name = team.name;
     dto.logoUrl = team.logoUrl;
     dto.ruleset = team.ruleset;
-    dto.memberCount = team.members.length;
+    dto.memberCount = team.members.filter((member) => member.role === 'COACH').length;
+    dto.myRole = team.members.find((member) => member.userId === userId)?.role ?? 'COACH';
     dto.createdAt = team.createdAt;
     dto.updatedAt = team.updatedAt;
     return dto;
