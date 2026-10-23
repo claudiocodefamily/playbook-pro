@@ -12,6 +12,8 @@ const migrations: Readonly<Record<number, Migration>> = {
   // v2: patadas (acción "kick", destino `target` y receptor opcional) y campo hasta y = 75.
   // Solo amplía lo que se acepta, así que un diagram v1 ya es un v2 válido.
   1: (d) => ({ ...d, schemaVersion: 2 }),
+  // v3: dibujos a mano alzada (lápiz). Las jugadas anteriores no tienen ninguno.
+  2: (d) => ({ ...d, schemaVersion: 3, drawings: [] }),
 };
 
 const VersionedSchema = z.looseObject({ schemaVersion: z.number().int().min(1) });

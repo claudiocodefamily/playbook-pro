@@ -31,6 +31,16 @@ function runPlay(): PlayDiagram {
         { t: 1, playerId: rb.id, action: 'handoff' },
       ],
     },
+    drawings: [
+      {
+        id: newId(),
+        color: 'yellow',
+        points: [
+          { x: -2, y: 1 },
+          { x: 2, y: 1 },
+        ],
+      },
+    ],
   };
 }
 
@@ -87,11 +97,14 @@ describe('cloneDiagramWithNewIds', () => {
     const originalIds = new Set([
       ...original.players.map((player) => player.id),
       ...original.assignments.map((assignment) => assignment.id),
+      ...original.drawings.map((drawing) => drawing.id),
     ]);
     const copyIds = [
       ...copy.players.map((player) => player.id),
       ...copy.assignments.map((assignment) => assignment.id),
+      ...copy.drawings.map((drawing) => drawing.id),
     ];
+    expect(copy.drawings[0]?.points).toEqual(original.drawings[0]?.points);
     expect(copyIds.some((id) => originalIds.has(id))).toBe(false);
 
     const labelOf = (diagram: PlayDiagram, id: string | undefined) =>

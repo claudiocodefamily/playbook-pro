@@ -16,7 +16,7 @@ import { UuidSchema } from '../ids.js';
  * Si cambia la forma de este esquema: sube DIAGRAM_SCHEMA_VERSION y añade la migración
  * en migrations.ts.
  */
-export const DIAGRAM_SCHEMA_VERSION = 2 as const;
+export const DIAGRAM_SCHEMA_VERSION = 3 as const;
 
 const Yards = z.number().finite();
 const Seconds = z.number().finite().min(-10).max(30);
@@ -120,6 +120,19 @@ export const BallSchema = z.object({
     .max(10),
 });
 
+/** Colores del lápiz: los de una pizarra de coach. */
+export const DRAWING_COLORS = ['white', 'yellow', 'red', 'blue'] as const;
+
+/**
+ * Un trazo a mano alzada sobre la cancha (lápiz). Solo es dibujo: no pertenece a ningún
+ * jugador ni se anima. Las coordenadas van en yardas, como el resto del diagram.
+ */
+export const DrawingSchema = z.object({
+  id: UuidSchema,
+  color: z.enum(DRAWING_COLORS),
+  points: z.array(PointSchema).min(2).max(400),
+});
+
 export const TimelineSchema = z.object({
   duration: z.number().positive().max(20),
   /** Cuánto pre-snap se anima, en segundos negativos (p. ej. -3). */
@@ -144,6 +157,7 @@ export const PlayDiagramSchema = z
     ball: BallSchema,
     timeline: TimelineSchema,
     notes: z.string().max(5000).default(''),
+    drawings: z.array(DrawingSchema).max(100).default([]),
   })
   .superRefine((diagram, ctx) => {
     const playerIds = new Set<string>();
@@ -220,6 +234,7 @@ export type PlayDiagramInput = z.input<typeof PlayDiagramSchema>;
 export type Assignment = z.infer<typeof AssignmentSchema>;
 export type DiagramPlayer = z.infer<typeof DiagramPlayerSchema>;
 export type Point = z.infer<typeof PointSchema>;
+export type Drawing = z.infer<typeof DrawingSchema>;
 
 /** Diagram vacío para una jugada nueva: balón en la propia 25, en el centro. */
 export function createEmptyDiagram(): PlayDiagram {
@@ -231,5 +246,6 @@ export function createEmptyDiagram(): PlayDiagram {
     ball: { carrierTimeline: [] },
     timeline: { duration: 6, start: 0, keyframes: [{ t: 0, label: 'Snap' }] },
     notes: '',
+    drawings: [],
   };
 }

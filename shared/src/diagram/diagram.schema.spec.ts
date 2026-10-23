@@ -171,10 +171,58 @@ describe('patadas (v2)', () => {
   });
 });
 
+describe('dibujos (lápiz)', () => {
+  const stroke = (points: { x: number; y: number }[]) => ({ id: newId(), color: 'yellow', points });
+
+  it('acepta trazos a mano alzada dentro del campo', () => {
+    const play = {
+      ...slantPlay(),
+      drawings: [
+        stroke([
+          { x: 0, y: 0 },
+          { x: 3, y: 4 },
+        ]),
+      ],
+    };
+    expect(PlayDiagramSchema.safeParse(play).success).toBe(true);
+  });
+
+  it('rechaza un trazo de un solo punto, un color desconocido o fuera del campo', () => {
+    const bad = [
+      stroke([{ x: 0, y: 0 }]),
+      {
+        ...stroke([
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ]),
+        color: 'green',
+      },
+      stroke([
+        { x: 0, y: 0 },
+        { x: 40, y: 1 },
+      ]),
+    ];
+    for (const drawing of bad) {
+      expect(PlayDiagramSchema.safeParse({ ...slantPlay(), drawings: [drawing] }).success).toBe(
+        false,
+      );
+    }
+  });
+});
+
 describe('migrateDiagram', () => {
   it('lleva un diagram v1 a la versión actual sin cambiar su contenido', () => {
     const play = slantPlay();
-    expect(migrateDiagram({ ...play, schemaVersion: 1 })).toEqual(play);
+    const { drawings, ...v1 } = play;
+    expect(drawings).toEqual([]);
+    expect(migrateDiagram({ ...v1, schemaVersion: 1 })).toEqual(play);
+  });
+
+  it('lleva un diagram v2 a la v3 con la lista de dibujos vacía', () => {
+    const { drawings, ...v2 } = slantPlay();
+    const migrated = migrateDiagram({ ...v2, schemaVersion: 2 });
+    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.drawings).toEqual(drawings);
   });
 
   it('devuelve tal cual un diagram de la versión actual', () => {

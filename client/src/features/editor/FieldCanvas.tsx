@@ -19,6 +19,7 @@ import {
 } from '../field/geometry';
 import { ballAt, ballFlights, snapSpot } from '../field/ball';
 import { animatedPositions, type CoverageAssignment, isCoverage } from '../field/coverage';
+import { DRAWING_INK } from '../field/drawings';
 import { sampleTrails, trailsAt } from '../field/trails';
 import {
   chainEnd,
@@ -28,6 +29,7 @@ import {
   type PathAssignment,
 } from '../field/paths';
 import {
+  addDrawing,
   addManCoverage,
   addPathAssignment,
   addTargetedBlock,
@@ -36,6 +38,8 @@ import {
   movePlayer,
   moveZone,
   snapAndClamp,
+  drawingAt,
+  removeDrawing,
 } from './diagram-ops';
 import { useEditor } from './editor-context';
 
@@ -57,6 +61,9 @@ const COLORS = {
   endZone: '#1d5027',
   coverage: '#fbbf24',
 };
+/** La goma borra el trazo del lápiz que pasa a menos de esta distancia del dedo, en yardas. */
+const ERASER_YARDS = 1;
+
 /** Al soltar un marcaje, se engancha al jugador de ataque más cercano dentro de esta distancia. */
 const MAN_SNAP_YARDS = 3;
 
@@ -114,6 +121,14 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
   // Al soltar un trazo sobre la hierba, Konva también lanza un "click" en la cancha que
   // deseleccionaría lo recién dibujado: se ignora si llega justo después de dibujar.
   const drewAt = useRef(0);
+  // El trazo del lápiz en curso, en yardas. Igual que el borrador: ref para leer y estado para pintar.
+  const sketchRef = useRef<Point[] | null>(null);
+  const [sketch, setSketchState] = useState<Point[] | null>(null);
+  const setSketch = (next: Point[] | null) => {
+    sketchRef.current = next;
+    setSketchState(next);
+  };
+  const pencilColor = useEditor((state) => state.pencilColor);
   const setDraft = (next: Draft | null) => {
     draftRef.current = next;
     setDraftState(next);
@@ -147,9 +162,42 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
   const goal = goalLineY(diagram.field.yardLine);
   const drawing = tool !== 'move';
   const coverageTool = tool === 'man' || tool === 'zone';
+  const sketching = tool === 'pencil' || tool === 'eraser';
+
+  const erase = (at: Point) => {
+    apply((current) => {
+      const hit = drawingAt(current, at, ERASER_YARDS);
+      return hit ? removeDrawing(current, hit) : current;
+    });
+  };
+
+  const startSketch = (pointer: { x: number; y: number }) => {
+    if (playbackTime !== null) return;
+    const at = toDiagram(pointer);
+    setSketch([at]);
+    if (tool === 'eraser') erase(at);
+  };
+
+  const moveSketch = (pointer: { x: number; y: number }) => {
+    const active = sketchRef.current;
+    const last = active?.at(-1);
+    if (!active || !last) return;
+    const at = toDiagram(pointer);
+    if (Math.hypot(at.x - last.x, at.y - last.y) * scale < DRAW_SAMPLE_PX / 2) return;
+    setSketch([...active, at]);
+    if (tool === 'eraser') erase(at);
+  };
+
+  const finishSketch = () => {
+    const active = sketchRef.current;
+    if (!active) return;
+    setSketch(null);
+    if (tool !== 'pencil') return;
+    apply((current) => addDrawing(current, pencilColor, active) ?? current);
+  };
 
   const startDraw = (playerId: string, pointer: { x: number; y: number }) => {
-    if (playbackTime !== null || tool === 'move') return;
+    if (playbackTime !== null || tool === 'move' || sketching) return;
     const player = diagram.players.find((candidate) => candidate.id === playerId);
     // Las coberturas solo salen de un defensor.
     if (coverageTool && player?.side !== 'D') return;
@@ -160,7 +208,7 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
 
   const finishDraw = () => {
     const active = draftRef.current;
-    if (!active || tool === 'move') return;
+    if (!active || tool === 'move' || tool === 'pencil' || tool === 'eraser') return;
     setDraft(null);
     drewAt.current = performance.now();
     let addedId: string | null = null;
@@ -238,6 +286,11 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
           onClick={(event) => deselectOnField(event.target)}
           onTap={(event) => deselectOnField(event.target)}
           onPointerMove={(event) => {
+            if (sketchRef.current) {
+              const pointer = event.target.getStage()?.getPointerPosition();
+              if (pointer) moveSketch(pointer);
+              return;
+            }
             const active = draftRef.current;
             if (!active) return;
             const pointer = event.target.getStage()?.getPointerPosition();
@@ -246,8 +299,14 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
             if (Math.hypot(pointer.x - last.x, pointer.y - last.y) < DRAW_SAMPLE_PX) return;
             setDraft({ ...active, raw: [...active.raw, pointer] });
           }}
-          onPointerUp={finishDraw}
-          onPointerLeave={finishDraw}
+          onPointerUp={() => {
+            finishSketch();
+            finishDraw();
+          }}
+          onPointerLeave={() => {
+            finishSketch();
+            finishDraw();
+          }}
         >
           <Layer listening={false}>
             <Rect width={width} height={height} fill={COLORS.turf} />
@@ -461,6 +520,45 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
                 onStartDraw={startDraw}
               />
             ))}
+          </Layer>
+
+          {/* Los dibujos del lápiz van encima de todo: son las rayas del coach sobre la pizarra. */}
+          <Layer listening={sketching && playbackTime === null}>
+            {[
+              ...diagram.drawings,
+              ...(sketch && tool === 'pencil'
+                ? [{ id: 'sketch', color: pencilColor, points: sketch }]
+                : []),
+            ].map((drawing) => (
+              <Line
+                key={drawing.id}
+                points={drawing.points.flatMap((point) => {
+                  const { x, y } = px(point);
+                  return [x, y];
+                })}
+                stroke={DRAWING_INK[drawing.color].hex}
+                strokeWidth={Math.max(3, 0.22 * scale)}
+                lineCap="round"
+                lineJoin="round"
+                tension={0.3}
+                shadowColor="black"
+                shadowBlur={2}
+                shadowOpacity={0.35}
+                listening={false}
+              />
+            ))}
+            {sketching && (
+              // Capa que recibe el dedo: con el lápiz o la goma no se mueve ni se selecciona nada.
+              <Rect
+                width={width}
+                height={height}
+                fill="transparent"
+                onPointerDown={(event) => {
+                  const pointer = event.target.getStage()?.getPointerPosition();
+                  if (pointer) startSketch(pointer);
+                }}
+              />
+            )}
           </Layer>
 
           {hasOffense && (
