@@ -78,7 +78,7 @@ export function PlayerPanel() {
               }
             }}
           />
-          {player.side === 'O' && <BallSection player={player} />}
+          <BallSection player={player} />
           <Button
             variant="secondary"
             className="text-red-700 dark:text-red-300"

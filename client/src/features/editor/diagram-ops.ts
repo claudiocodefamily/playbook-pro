@@ -1,5 +1,6 @@
 import {
   FIELD_HALF_WIDTH_YARDS,
+  goalPostsY,
   newId,
   type Assignment,
   type DiagramPlayer,
@@ -22,7 +23,7 @@ import {
 export const MAX_PER_SIDE = 11;
 
 /** Límites del diagram (los mismos que valida PointSchema) para no sacar a nadie del campo. */
-const BOUNDS = { minX: -FIELD_HALF_WIDTH_YARDS, maxX: FIELD_HALF_WIDTH_YARDS, minY: -20, maxY: 60 };
+const BOUNDS = { minX: -FIELD_HALF_WIDTH_YARDS, maxX: FIELD_HALF_WIDTH_YARDS, minY: -20, maxY: 75 };
 
 /** Al soltar un jugador se ajusta a la media yarda: posiciones limpias y fáciles de repetir. */
 const SNAP_YARDS = 0.5;
@@ -350,8 +351,8 @@ export function removeAssignment(diagram: PlayDiagram, assignmentId: string): Pl
   };
 }
 
-/** Cómo recibe un jugador el balón después del snap. */
-export const BALL_TRANSFERS = ['handoff', 'pitch', 'pass'] as const;
+/** Cómo recibe un jugador el balón después del snap (la patada, del equipo contrario). */
+export const BALL_TRANSFERS = ['handoff', 'pitch', 'pass', 'kick'] as const;
 export type BallTransfer = (typeof BALL_TRANSFERS)[number];
 const MAX_BALL_ENTRIES = 10;
 /** Separación mínima entre dos cambios de manos, en segundos. */
@@ -384,16 +385,83 @@ export function addBallTransfer(
 ): PlayDiagram | null {
   const entries = ballEntries(diagram);
   const last = entries.at(-1);
-  if (!last || last.playerId === playerId || entries.length >= MAX_BALL_ENTRIES) return null;
+  // Sin portador (tras un field goal) el balón ya no cambia de manos.
+  if (!last?.playerId || last.playerId === playerId || entries.length >= MAX_BALL_ENTRIES) {
+    return null;
+  }
   const routeEnd = Math.max(0, ...playerPaths(diagram, playerId).map((path) => path.endTime));
   const suggested =
     action === 'pass'
       ? routeEnd > 0
         ? routeEnd - 0.6
         : last.t + 1.5
-      : last.t + (action === 'handoff' ? 0.6 : 0.8);
+      : last.t + TRANSFER_DELAY[action];
   const t = round(Math.min(TIME_LIMIT - 2, Math.max(suggested, last.t + BALL_GAP)));
   return withBall(diagram, [...entries, { t, playerId, action }]);
+}
+
+/** Segundos desde el cambio de manos anterior hasta este, si nadie dice otra cosa. */
+const TRANSFER_DELAY: Readonly<Record<Exclude<BallTransfer, 'pass'>, number>> = {
+  handoff: 0.6,
+  pitch: 0.8,
+  // El punter recibe el snap a 14 yardas y patea en unos 2 segundos.
+  kick: 2,
+};
+
+/**
+ * Kickoff: el balón sale del tee (en la LOS) hacia el returner. Sale cuando el kicker
+ * acaba su carrera, si la tiene dibujada. Devuelve null si el balón ya tiene historia.
+ */
+export function addKickoff(diagram: PlayDiagram, playerId: string): PlayDiagram | null {
+  if (diagram.ball.carrierTimeline.length > 0) return null;
+  const kickers = diagram.players.filter((player) => player.position === 'K');
+  const runUp = Math.max(
+    0,
+    ...kickers.flatMap((kicker) => playerPaths(diagram, kicker.id).map((path) => path.endTime)),
+  );
+  const t = round(Math.min(TIME_LIMIT - 2, Math.max(BALL_GAP, runUp || 1)));
+  return withBall(diagram, [{ t, playerId, action: 'kick' }]);
+}
+
+/** Dónde apunta un field goal: entre los postes. Null si quedan a más de 75 yardas. */
+export function fieldGoalTarget(diagram: PlayDiagram): Point | null {
+  const y = goalPostsY(diagram.field.yardLine);
+  return y <= BOUNDS.maxY ? { x: 0, y } : null;
+}
+
+/**
+ * Field goal o PAT: el que tiene el balón (el holder) lo sujeta y el kicker lo patea
+ * entre los postes. Nadie lo recibe. Devuelve null si no hay portador o no llega.
+ */
+export function addFieldGoal(diagram: PlayDiagram): PlayDiagram | null {
+  const entries = ballEntries(diagram);
+  const last = entries.at(-1);
+  const target = fieldGoalTarget(diagram);
+  if (!last?.playerId || !target || entries.length >= MAX_BALL_ENTRIES) return null;
+  // El snap llega al holder en algo más de medio segundo; la patada sale enseguida.
+  const t = round(Math.min(TIME_LIMIT - 2, last.t + (last.action === 'snap' ? 1.3 : 0.8)));
+  return withBall(diagram, [...entries, { t, action: 'kick', target }]);
+}
+
+/**
+ * Mueve el balón a otra yarda (1 = propia 1, 99 = yarda 1 rival). Los field goals siguen
+ * apuntando a los postes; si ya no llegan, se quitan (con lo que venía después).
+ */
+export function setYardLine(diagram: PlayDiagram, yardLine: number): PlayDiagram {
+  const next = Math.round(Math.min(99, Math.max(1, yardLine)));
+  if (next === diagram.field.yardLine) return diagram;
+  const before = goalPostsY(diagram.field.yardLine);
+  const moved: PlayDiagram = { ...diagram, field: { ...diagram.field, yardLine: next } };
+  const target = fieldGoalTarget(moved);
+  const entries = ballEntries(diagram);
+  const isFieldGoal = (entry: BallEntry) =>
+    entry.action === 'kick' && entry.target?.x === 0 && entry.target.y === before;
+  const firstLost = target ? -1 : entries.findIndex(isFieldGoal);
+  const kept = firstLost === -1 ? entries : entries.slice(0, firstLost);
+  return withBall(
+    moved,
+    kept.map((entry) => (target && isFieldGoal(entry) ? { ...entry, target } : entry)),
+  );
 }
 
 /** Cambia cuándo sale el balón, sin adelantar al cambio anterior ni pasar al siguiente. */

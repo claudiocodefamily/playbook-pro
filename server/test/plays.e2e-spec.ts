@@ -1,4 +1,9 @@
-import { createEmptyDiagram, newId, type PlayDiagram } from '@playbook/shared';
+import {
+  createEmptyDiagram,
+  DIAGRAM_SCHEMA_VERSION,
+  newId,
+  type PlayDiagram,
+} from '@playbook/shared';
 import request from 'supertest';
 import { MAX_VERSIONS_PER_PLAY } from '../src/modules/plays/plays.service.js';
 import { createTestApp, registerCoach, type TestApp, type TestCoach } from './create-test-app.js';
@@ -186,9 +191,11 @@ describe('Plays (e2e)', () => {
         http().post(setup.playsUrl).set(setup.coach.auth).send(body);
 
       await post({}).expect(400);
-      await post({ name: 'Slant', diagram: { ...createEmptyDiagram(), schemaVersion: 2 } }).expect(
-        400,
-      );
+      // Una versión del esquema que aún no existe.
+      await post({
+        name: 'Slant',
+        diagram: { ...createEmptyDiagram(), schemaVersion: DIAGRAM_SCHEMA_VERSION + 1 },
+      }).expect(400);
       const broken = slantDiagram();
       const response = await post({
         name: 'Slant',

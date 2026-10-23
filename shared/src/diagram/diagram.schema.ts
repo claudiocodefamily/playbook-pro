@@ -16,14 +16,15 @@ import { UuidSchema } from '../ids.js';
  * Si cambia la forma de este esquema: sube DIAGRAM_SCHEMA_VERSION y añade la migración
  * en migrations.ts.
  */
-export const DIAGRAM_SCHEMA_VERSION = 1 as const;
+export const DIAGRAM_SCHEMA_VERSION = 2 as const;
 
 const Yards = z.number().finite();
 const Seconds = z.number().finite().min(-10).max(30);
 
 export const PointSchema = z.object({
   x: Yards.min(-FIELD_HALF_WIDTH_YARDS).max(FIELD_HALF_WIDTH_YARDS),
-  y: Yards.min(-20).max(60),
+  // Hasta 75 yardas campo abajo: lo que recorre un kickoff o un field goal largo.
+  y: Yards.min(-20).max(75),
 });
 
 export const FieldSchema = z.object({
@@ -109,8 +110,11 @@ export const BallSchema = z.object({
     .array(
       z.object({
         t: Seconds,
-        playerId: UuidSchema,
-        action: z.enum(['snap', 'handoff', 'pitch', 'pass', 'fumble']).optional(),
+        /** Quién recibe el balón. Una patada a un punto (field goal) no tiene receptor. */
+        playerId: UuidSchema.optional(),
+        action: z.enum(['snap', 'handoff', 'pitch', 'pass', 'kick', 'fumble']).optional(),
+        /** Solo en las patadas sin receptor: dónde cae el balón. */
+        target: PointSchema.optional(),
       }),
     )
     .max(10),
@@ -193,7 +197,15 @@ export const PlayDiagramSchema = z
     });
 
     diagram.ball.carrierTimeline.forEach((entry, index) => {
-      if (!playerIds.has(entry.playerId)) {
+      if (entry.playerId === undefined) {
+        if (entry.action !== 'kick' || entry.target === undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Sin receptor solo puede ir una patada con destino',
+            path: ['ball', 'carrierTimeline', index, 'playerId'],
+          });
+        }
+      } else if (!playerIds.has(entry.playerId)) {
         ctx.addIssue({
           code: 'custom',
           message: 'El portador del balón no existe',

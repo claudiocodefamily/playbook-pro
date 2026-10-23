@@ -15,6 +15,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router';
+import { useStore } from 'zustand';
 import { PageHeader } from '../../components/PageHeader';
 import { ErrorAlert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
@@ -36,6 +37,7 @@ import {
   MAX_PER_SIDE,
   removeAssignment,
   removePlayer,
+  setYardLine,
 } from './diagram-ops';
 import { EditorContext, useEditor } from './editor-context';
 import { createEditorStore, type EditorStore } from './editor-store';
@@ -99,7 +101,7 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
   // La estela muestra por dónde pasó cada jugador durante la animación.
   const [showTrails, setShowTrails] = useState(true);
   // La ventana del campo se fija al abrir: si cambiara al arrastrar, la cancha "bailaría".
-  const [fieldWindow] = useState<FieldWindow>(() => {
+  const [baseWindow] = useState<FieldWindow>(() => {
     const fit = fitWindow([
       ...play.diagram.players,
       ...play.diagram.assignments.flatMap((a) => a.points),
@@ -112,6 +114,15 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
     ]);
     return { minY: Math.min(-12, fit.minY), maxY: Math.max(18, fit.maxY) };
   });
+  // Solo crece si algo queda fuera: un rival puesto campo abajo (un punt return) o una
+  // patada a portería. Arrastrar no la cambia: los jugadores no salen de la cancha.
+  const reach = useStore(store, (state) =>
+    Math.max(
+      ...state.diagram.players.map((player) => player.y + 5),
+      ...state.diagram.ball.carrierTimeline.map((entry) => (entry.target?.y ?? 0) + 3),
+    ),
+  );
+  const fieldWindow = reach > baseWindow.maxY ? { ...baseWindow, maxY: reach } : baseWindow;
   // Ancho máximo para que la cancha completa quepa a lo alto de la pantalla.
   const aspect = FIELD_WIDTH / (fieldWindow.maxY - fieldWindow.minY);
 
@@ -354,7 +365,9 @@ function SaveVersionButton({
   );
 }
 
-/** Formación propia, rival y añadir jugadores. */
+type Picking = { title: string; hint: string; emptyLabel: string; unit: 'O' | 'D' };
+
+/** Formación propia, rival (o en special teams, quien patea y quien recibe) y añadir jugadores. */
 function SidePanel({
   teamId,
   side,
@@ -368,20 +381,47 @@ function SidePanel({
   const select = useEditor((state) => state.select);
   const ownSide = side === 'defense' ? 'D' : 'O';
   const ownCount = useEditor((state) => countSide(state.diagram, ownSide));
-  const [picking, setPicking] = useState<'own' | 'rival' | null>(null);
-  const pickingSide = picking === 'rival' ? RIVAL_SIDE[side] : side;
-  const diagramSide = picking === 'rival' ? (ownSide === 'O' ? 'D' : 'O') : ownSide;
+  const [pickingKey, setPicking] = useState<'own' | 'rival' | null>(null);
+  const special = side === 'special';
+  const own: Picking = special
+    ? {
+        title: 'Equipo que patea',
+        hint: 'Punt, kickoff o field goal. Los jugadores conservan sus rutas.',
+        emptyLabel: 'Quitar a todos',
+        unit: 'O',
+      }
+    : {
+        title: 'Cambiar formación',
+        hint: 'Los jugadores se mueven a la nueva formación y conservan sus rutas.',
+        emptyLabel: 'Quitar a todos',
+        unit: ownSide,
+      };
+  const rival: Picking = special
+    ? {
+        title: 'Equipo que recibe',
+        hint: 'Punt return, kick return o field goal block, campo abajo.',
+        emptyLabel: 'Sin equipo que recibe',
+        unit: 'D',
+      }
+    : {
+        title: 'Poner rival',
+        hint: 'Coloca al rival enfrente para explicar contra qué se corre la jugada.',
+        emptyLabel: 'Sin rival',
+        unit: ownSide === 'O' ? 'D' : 'O',
+      };
+  const picking = pickingKey === 'own' ? own : pickingKey === 'rival' ? rival : null;
+  const pickingSide = pickingKey === 'rival' && !special ? RIVAL_SIDE[side] : side;
 
   return (
     <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4 ring-1 ring-slate-200">
       <h2 className="mb-1 font-semibold">Cancha</h2>
       <Button variant="secondary" className="justify-start" onClick={() => setPicking('own')}>
         <Users aria-hidden className="size-4" />
-        Formación ({SIDE_LABELS[side].toLowerCase()})
+        {special ? own.title : `Formación (${SIDE_LABELS[side].toLowerCase()})`}
       </Button>
       <Button variant="secondary" className="justify-start" onClick={() => setPicking('rival')}>
         <Shield aria-hidden className="size-4" />
-        Poner rival ({SIDE_LABELS[RIVAL_SIDE[side]].toLowerCase()})
+        {special ? rival.title : `Poner rival (${SIDE_LABELS[RIVAL_SIDE[side]].toLowerCase()})`}
       </Button>
       <Button
         variant="secondary"
@@ -407,36 +447,75 @@ function SidePanel({
         <UserPlus aria-hidden className="size-4" />
         Añadir jugador ({ownCount}/{MAX_PER_SIDE})
       </Button>
+      <YardLineSlider />
 
-      <Modal
-        open={picking !== null}
-        title={picking === 'rival' ? 'Poner rival' : 'Cambiar formación'}
-        onClose={() => setPicking(null)}
-      >
-        <p className="mb-4 text-sm text-slate-600">
-          {picking === 'rival'
-            ? 'Coloca al rival enfrente para explicar contra qué se corre la jugada.'
-            : 'Los jugadores se mueven a la nueva formación y conservan sus rutas.'}
-        </p>
-        <FormationPicker
-          teamId={teamId}
-          side={pickingSide}
-          ruleset={ruleset}
-          value={null}
-          emptyLabel={picking === 'rival' ? 'Sin rival' : 'Quitar a todos'}
-          onChange={(_id, formation) => {
-            apply((diagram) =>
-              formation
-                ? applyFormation(diagram, formation.players, diagramSide)
-                : diagram.players
-                    .filter((player) => player.side === diagramSide)
-                    .reduce((current, player) => removePlayer(current, player.id), diagram),
-            );
-            setPicking(null);
-          }}
-        />
+      <Modal open={picking !== null} title={picking?.title ?? ''} onClose={() => setPicking(null)}>
+        <p className="mb-4 text-sm text-slate-600">{picking?.hint}</p>
+        {picking && (
+          <FormationPicker
+            teamId={teamId}
+            side={pickingSide}
+            ruleset={ruleset}
+            value={null}
+            unit={special ? picking.unit : undefined}
+            emptyLabel={picking.emptyLabel}
+            onChange={(_id, formation) => {
+              const unit = picking.unit;
+              apply((diagram) =>
+                formation
+                  ? applyFormation(diagram, formation.players, unit)
+                  : diagram.players
+                      .filter((player) => player.side === unit)
+                      .reduce((current, player) => removePlayer(current, player.id), diagram),
+              );
+              setPicking(null);
+            }}
+          />
+        )}
       </Modal>
     </section>
+  );
+}
+
+/** "Propia 25", "Medio campo" o "Rival 30": cómo dicen los coaches dónde está el balón. */
+function yardLineLabel(yardLine: number): string {
+  if (yardLine === 50) return 'Medio campo';
+  return yardLine < 50 ? `Propia ${yardLine}` : `Rival ${100 - yardLine}`;
+}
+
+/** Dónde está el balón en el campo. Importa para ver la end zone y apuntar un field goal. */
+function YardLineSlider() {
+  const yardLine = useEditor((state) => state.diagram.field.yardLine);
+  const apply = useEditor((state) => state.apply);
+  const [draft, setDraft] = useState(yardLine);
+  const [seen, setSeen] = useState(yardLine);
+  if (seen !== yardLine) {
+    setSeen(yardLine);
+    setDraft(yardLine);
+  }
+  // Se aplica al soltar: arrastrar deja un solo paso en "Deshacer".
+  const commit = () => {
+    if (draft !== yardLine) apply((diagram) => setYardLine(diagram, draft));
+  };
+  return (
+    <label className="mt-1 flex flex-col gap-1 text-sm font-medium text-slate-700">
+      <span className="flex justify-between">
+        Balón en
+        <span className="text-slate-500 tabular-nums">{yardLineLabel(draft)}</span>
+      </span>
+      <input
+        type="range"
+        className="h-8 accent-turf-700"
+        min={1}
+        max={99}
+        step={1}
+        value={draft}
+        onChange={(event) => setDraft(Number(event.target.value))}
+        onPointerUp={commit}
+        onKeyUp={commit}
+        onBlur={commit}
+      />
+    </label>
   );
 }
 

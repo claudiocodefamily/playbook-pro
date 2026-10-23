@@ -141,7 +141,42 @@ describe('PlayDiagramSchema', () => {
   });
 });
 
+describe('patadas (v2)', () => {
+  const punter = player({ position: 'P', label: 'P', x: 0, y: -14 });
+  const returner = player({ side: 'D', position: 'S', label: 'PR', x: 0, y: 45 });
+  const diagramWith = (carrierTimeline: PlayDiagram['ball']['carrierTimeline']) => ({
+    ...createEmptyDiagram(),
+    players: [punter, returner],
+    ball: { carrierTimeline },
+  });
+
+  it('acepta un punt al returner y un field goal sin receptor', () => {
+    const punt = diagramWith([
+      { t: 0, playerId: punter.id, action: 'snap' },
+      { t: 2, playerId: returner.id, action: 'kick' },
+    ]);
+    const fieldGoal = diagramWith([
+      { t: 0, playerId: punter.id, action: 'snap' },
+      { t: 1.3, action: 'kick', target: { x: 0, y: 30 } },
+    ]);
+    expect(PlayDiagramSchema.safeParse(punt).success).toBe(true);
+    expect(PlayDiagramSchema.safeParse(fieldGoal).success).toBe(true);
+  });
+
+  it('rechaza un cambio de manos sin receptor que no sea una patada con destino', () => {
+    const noTarget = diagramWith([{ t: 1, action: 'kick' }]);
+    const pass = diagramWith([{ t: 1, action: 'pass', target: { x: 0, y: 10 } }]);
+    expect(PlayDiagramSchema.safeParse(noTarget).success).toBe(false);
+    expect(PlayDiagramSchema.safeParse(pass).success).toBe(false);
+  });
+});
+
 describe('migrateDiagram', () => {
+  it('lleva un diagram v1 a la versión actual sin cambiar su contenido', () => {
+    const play = slantPlay();
+    expect(migrateDiagram({ ...play, schemaVersion: 1 })).toEqual(play);
+  });
+
   it('devuelve tal cual un diagram de la versión actual', () => {
     const play = slantPlay();
     expect(migrateDiagram(play)).toEqual(play);

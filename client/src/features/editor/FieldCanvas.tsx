@@ -1,4 +1,11 @@
-import type { DiagramPlayer, Point, Ruleset } from '@playbook/shared';
+import {
+  type DiagramPlayer,
+  GOAL_POST_HALF_WIDTH_YARDS,
+  goalLineY,
+  goalPostsY,
+  type Point,
+  type Ruleset,
+} from '@playbook/shared';
 import Konva from 'konva';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Arrow, Circle, Ellipse, Group, Layer, Line, Rect, Stage, Text } from 'react-konva';
@@ -40,6 +47,7 @@ const COLORS = {
   ball: '#8b4513',
   ballDark: '#3b1d0a',
   pass: '#fde68a',
+  endZone: '#1d5027',
   coverage: '#fbbf24',
 };
 /** Al soltar un marcaje, se engancha al jugador de ataque más cercano dentro de esta distancia. */
@@ -118,6 +126,7 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
       : ballAt(diagram, playbackTime, flights);
   const playerRadius = Math.max(PLAYER_RADIUS * scale, MIN_RADIUS);
   const losY = px({ x: 0, y: 0 }).y;
+  const goal = goalLineY(diagram.field.yardLine);
   const drawing = tool !== 'move';
   const coverageTool = tool === 'man' || tool === 'zone';
 
@@ -208,32 +217,46 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
         >
           <Layer listening={false}>
             <Rect width={width} height={height} fill={COLORS.turf} />
-            {yardLines(window).map((line) => {
-              const y = px({ x: 0, y: line }).y;
-              return (
-                <Line
-                  key={line}
-                  points={[0, y, width, y]}
-                  stroke={COLORS.chalk}
-                  opacity={0.25}
-                  strokeWidth={1.5}
-                />
-              );
-            })}
-            {hashMarksX(ruleset).flatMap((hashX) =>
-              Array.from({ length: Math.floor(window.maxY - window.minY) + 1 }, (_, i) => {
-                const { x, y } = px({ x: hashX, y: window.minY + i });
+            {/* En la end zone no hay líneas de yarda ni hash marks. */}
+            {yardLines(window)
+              .filter((line) => line < goal)
+              .map((line) => {
+                const y = px({ x: 0, y: line }).y;
                 return (
                   <Line
-                    key={`${hashX}-${i}`}
-                    points={[x - 0.5 * scale, y, x + 0.5 * scale, y]}
+                    key={line}
+                    points={[0, y, width, y]}
                     stroke={COLORS.chalk}
-                    opacity={0.45}
+                    opacity={0.25}
                     strokeWidth={1.5}
                   />
                 );
-              }),
+              })}
+            {hashMarksX(ruleset).flatMap((hashX) =>
+              Array.from(
+                { length: Math.floor(Math.min(window.maxY, goal) - window.minY) + 1 },
+                (_, i) => {
+                  const { x, y } = px({ x: hashX, y: window.minY + i });
+                  return (
+                    <Line
+                      key={`${hashX}-${i}`}
+                      points={[x - 0.5 * scale, y, x + 0.5 * scale, y]}
+                      stroke={COLORS.chalk}
+                      opacity={0.45}
+                      strokeWidth={1.5}
+                    />
+                  );
+                },
+              ),
             )}
+            <EndZone
+              yardLine={diagram.field.yardLine}
+              ruleset={ruleset}
+              window={window}
+              px={px}
+              width={width}
+              scale={scale}
+            />
             <Line
               points={[0, losY, width, losY]}
               stroke={COLORS.firstDown}
@@ -283,7 +306,12 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
             })}
             {playbackTime === null &&
               flights
-                .filter((flight) => flight.action === 'pass' || flight.action === 'pitch')
+                .filter(
+                  (flight) =>
+                    flight.action === 'pass' ||
+                    flight.action === 'pitch' ||
+                    flight.action === 'kick',
+                )
                 .map((flight) => {
                   const from = px(flight.from);
                   const to = px(flight.to);
@@ -293,7 +321,8 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
                         points={[from.x, from.y, to.x, to.y]}
                         stroke={COLORS.pass}
                         strokeWidth={2}
-                        dash={[6, 5]}
+                        dash={flight.action === 'kick' ? [2, 6] : [6, 5]}
+                        lineCap="round"
                         opacity={0.9}
                       />
                       <Circle x={to.x} y={to.y} radius={4} fill={COLORS.pass} />
@@ -827,4 +856,73 @@ function useContainerWidth(ref: React.RefObject<HTMLDivElement | null>): number 
     return () => observer.disconnect();
   }, [ref]);
   return width;
+}
+
+/**
+ * La end zone rival y los postes, si caben en la ventana: la línea de gol a
+ * `100 - yardLine` yardas de la LOS y los postes en la línea de fondo, 10 más allá.
+ */
+function EndZone({
+  yardLine,
+  ruleset,
+  window,
+  px,
+  width,
+  scale,
+}: {
+  yardLine: number;
+  ruleset: Ruleset;
+  window: FieldWindow;
+  px: (point: Point) => { x: number; y: number };
+  width: number;
+  scale: number;
+}) {
+  const goal = goalLineY(yardLine);
+  if (goal >= window.maxY) return null;
+  const goalY = px({ x: 0, y: goal }).y;
+  const backY = px({ x: 0, y: Math.min(goalPostsY(yardLine), window.maxY) }).y;
+  const postsY = goalPostsY(yardLine);
+  const half = GOAL_POST_HALF_WIDTH_YARDS[ruleset];
+  const left = px({ x: -half, y: postsY });
+  const right = px({ x: half, y: postsY });
+  return (
+    <Group>
+      <Rect x={0} y={backY} width={width} height={goalY - backY} fill={COLORS.endZone} />
+      <Text
+        x={0}
+        y={(goalY + backY) / 2 - scale * 1.5}
+        width={width}
+        align="center"
+        text="END ZONE"
+        fontSize={scale * 3}
+        fontStyle="bold"
+        fill={COLORS.chalk}
+        opacity={0.18}
+        letterSpacing={scale}
+      />
+      <Line points={[0, goalY, width, goalY]} stroke={COLORS.chalk} strokeWidth={3} opacity={0.7} />
+      {postsY <= window.maxY && (
+        <>
+          <Line
+            points={[left.x, left.y, right.x, right.y]}
+            stroke={COLORS.firstDown}
+            strokeWidth={Math.max(3, scale * 0.4)}
+            lineCap="round"
+          />
+          <Circle
+            x={left.x}
+            y={left.y}
+            radius={Math.max(3, scale * 0.35)}
+            fill={COLORS.firstDown}
+          />
+          <Circle
+            x={right.x}
+            y={right.y}
+            radius={Math.max(3, scale * 0.35)}
+            fill={COLORS.firstDown}
+          />
+        </>
+      )}
+    </Group>
+  );
 }

@@ -6,10 +6,13 @@ type Migration = (input: RawDiagram) => RawDiagram;
 
 /**
  * Migraciones entre versiones del diagram. La clave es la versión de ORIGEN.
- * Ejemplo cuando exista la v2:
- *   1: (d) => ({ ...d, schemaVersion: 2, nuevoCampo: valorPorDefecto }),
+ * Ejemplo: `1: (d) => ({ ...d, schemaVersion: 2, nuevoCampo: valorPorDefecto })`.
  */
-const migrations: Readonly<Record<number, Migration>> = {};
+const migrations: Readonly<Record<number, Migration>> = {
+  // v2: patadas (acción "kick", destino `target` y receptor opcional) y campo hasta y = 75.
+  // Solo amplía lo que se acepta, así que un diagram v1 ya es un v2 válido.
+  1: (d) => ({ ...d, schemaVersion: 2 }),
+};
 
 const VersionedSchema = z.looseObject({ schemaVersion: z.number().int().min(1) });
 

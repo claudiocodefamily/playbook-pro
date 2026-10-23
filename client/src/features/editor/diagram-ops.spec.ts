@@ -9,6 +9,8 @@ import { describe, expect, it } from 'vitest';
 import { pathOrigins } from '../field/paths';
 import {
   addBallTransfer,
+  addFieldGoal,
+  addKickoff,
   addManCoverage,
   addZoneCoverage,
   addPathAssignment,
@@ -23,6 +25,7 @@ import {
   setAssignmentTiming,
   setBallTime,
   setSnapReceiver,
+  setYardLine,
   simplifyPath,
   snapAndClamp,
   updateAssignment,
@@ -447,5 +450,59 @@ describe('coberturas', () => {
       zone: { name: 'Deep third', width: 53 },
     });
     expect(PlayDiagramSchema.safeParse(named).success).toBe(true);
+  });
+});
+
+describe('special teams', () => {
+  const ls = { id: newId(), side: 'O', position: 'OL', label: 'LS', x: 0, y: -1 } as const;
+  const holder = { id: newId(), side: 'O', position: 'QB', label: 'H', x: 0, y: -7 } as const;
+  const kicker = { id: newId(), side: 'O', position: 'K', label: 'K', x: -2, y: -9 } as const;
+  const returner = { id: newId(), side: 'D', position: 'S', label: 'KR', x: 0, y: 60 } as const;
+  const base = (yardLine = 25): PlayDiagram => ({
+    ...createEmptyDiagram(),
+    field: { yardLine, hash: 'middle' },
+    players: [ls, holder, kicker, returner],
+  });
+
+  it('kickoff: el balón sale del tee hacia el returner; solo si no había nada', () => {
+    const kicked = addKickoff(base(), returner.id);
+    expect(kicked?.ball.carrierTimeline).toEqual([{ t: 1, playerId: returner.id, action: 'kick' }]);
+    expect(PlayDiagramSchema.safeParse(kicked).success).toBe(true);
+    if (!kicked) throw new Error('debería añadirse');
+    expect(addKickoff(kicked, returner.id)).toBeNull();
+  });
+
+  it('punt: tras el snap, la patada va al jugador del otro equipo', () => {
+    const punted = addBallTransfer(setSnapReceiver(base(), holder.id), returner.id, 'kick');
+    expect(punted?.ball.carrierTimeline.at(-1)).toEqual({
+      t: 2,
+      playerId: returner.id,
+      action: 'kick',
+    });
+  });
+
+  it('field goal: apunta a los postes, nadie lo recibe y después no hay más cambios', () => {
+    const snapped = setSnapReceiver(base(80), holder.id);
+    const kicked = addFieldGoal(snapped);
+    expect(kicked?.ball.carrierTimeline.at(-1)).toEqual({
+      t: 1.3,
+      action: 'kick',
+      target: { x: 0, y: 30 },
+    });
+    expect(PlayDiagramSchema.safeParse(kicked).success).toBe(true);
+    if (!kicked) throw new Error('debería añadirse');
+    expect(addBallTransfer(kicked, returner.id, 'kick')).toBeNull();
+    // Desde la propia 25 los postes quedan a 85 yardas: no llega.
+    expect(addFieldGoal(setSnapReceiver(base(25), holder.id))).toBeNull();
+  });
+
+  it('mover el balón de yarda reapunta el field goal o lo quita si ya no llega', () => {
+    const kicked = addFieldGoal(setSnapReceiver(base(80), holder.id));
+    if (!kicked) throw new Error('debería añadirse');
+    expect(setYardLine(kicked, 97).ball.carrierTimeline.at(-1)?.target).toEqual({ x: 0, y: 13 });
+    const tooFar = setYardLine(kicked, 20);
+    expect(tooFar.field.yardLine).toBe(20);
+    expect(tooFar.ball.carrierTimeline).toHaveLength(1);
+    expect(setYardLine(kicked, 150).field.yardLine).toBe(99);
   });
 });

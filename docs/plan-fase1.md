@@ -890,9 +890,16 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 
 **Modo oscuro** (hecho): botón en la cabecera que pasa de tema del sistema a claro y a oscuro, guardado en el navegador. En `client/src/index.css` la escala `slate` se invierte bajo `.dark` y las tarjetas usan `bg-surface`; los colores con tinte llevan su propio `dark:`.
 
+**Special teams** (hecho):
+
+- El diagram pasa a la v2. Añade la acción `kick`, un `target` opcional y el receptor opcional para el field goal. Los puntos llegan hasta y = 75, lo que recorre un kickoff. La migración v1→v2 no cambia datos.
+- Nuevas formaciones: Field Goal, Punt Return, Kick Return y Field Goal Block. En special teams, quien patea va en el lado O y quien recibe en el D, según dónde está colocada la formación (`formationSide`).
+- En el editor, los botones "Equipo que patea" y "Equipo que recibe" sustituyen a "Formación" y "Poner rival".
+- El balón admite kickoff desde el tee, punt al returner y field goal a los postes.
+- Control "Balón en" para mover la yarda. Se dibujan la end zone y los postes.
+
 **Sigue**
 
-- Special teams: formaciones de field goal/PAT, punt return y kick return, y el balón pateado en la animación.
 - Fase 3: pantallas de roster y coaches, notas y glosario, modo jugador, links de solo lectura y cuentas de jugadores.
 - Fase 4: exportar a PNG/PDF, quizzes y game plan.
 
