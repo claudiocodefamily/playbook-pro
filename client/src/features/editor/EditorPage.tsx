@@ -159,7 +159,7 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
       />
 
       {autosave.status === 'conflict' && (
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl bg-red-50 p-4 text-red-800 ring-1 ring-red-200 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl bg-red-50 p-4 text-red-800 ring-1 ring-red-200 dark:bg-red-950/50 dark:text-red-200 dark:ring-red-900 sm:flex-row sm:items-center sm:justify-between">
           <p>{autosave.error} Tus últimos cambios no se guardaron para no pisar los suyos.</p>
           <Button
             variant="danger"
@@ -236,7 +236,7 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
         </div>
 
         <aside className="flex flex-col gap-4 lg:w-72">
-          <section className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+          <section className="rounded-2xl bg-surface p-4 ring-1 ring-slate-200">
             <PlayerPanel />
           </section>
           <SidePanel teamId={play.teamId} side={side} ruleset={ruleset} />
@@ -373,7 +373,7 @@ function SidePanel({
   const diagramSide = picking === 'rival' ? (ownSide === 'O' ? 'D' : 'O') : ownSide;
 
   return (
-    <section className="flex flex-col gap-2 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+    <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4 ring-1 ring-slate-200">
       <h2 className="mb-1 font-semibold">Cancha</h2>
       <Button variant="secondary" className="justify-start" onClick={() => setPicking('own')}>
         <Users aria-hidden className="size-4" />

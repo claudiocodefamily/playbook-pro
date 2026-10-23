@@ -43,7 +43,10 @@ export function LoginPage() {
       </form>
       <p className="mt-6 text-center text-sm text-slate-600">
         ¿Aún no tienes cuenta?{' '}
-        <Link to="/register" className="font-semibold text-turf-700 hover:underline">
+        <Link
+          to="/register"
+          className="font-semibold text-turf-700 dark:text-turf-300 hover:underline"
+        >
           Regístrate
         </Link>
       </p>

@@ -58,8 +58,8 @@ export function FormationPicker({
             className={cn(
               'relative flex flex-col gap-2 rounded-2xl p-2 text-left ring-2 transition-colors',
               selected
-                ? 'bg-turf-50 ring-turf-600'
-                : 'bg-white ring-slate-200 hover:ring-slate-300',
+                ? 'bg-turf-50 ring-turf-600 dark:bg-turf-900/50'
+                : 'bg-surface ring-slate-200 hover:ring-slate-300',
             )}
           >
             {formation ? (

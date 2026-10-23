@@ -122,7 +122,7 @@ export function AssignmentPanel() {
 
       <Button
         variant="secondary"
-        className="text-red-700"
+        className="text-red-700 dark:text-red-300"
         onClick={() => apply((diagram) => removeAssignment(diagram, assignment.id))}
       >
         <Trash2 aria-hidden className="size-4" />
@@ -179,7 +179,7 @@ function Chip({
         'min-h-9 rounded-full px-3 text-sm font-medium ring-1 transition-colors',
         active
           ? 'bg-turf-700 text-white ring-turf-700'
-          : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50',
+          : 'bg-surface text-slate-700 ring-slate-300 hover:bg-slate-50',
       )}
     >
       {children}
@@ -279,7 +279,7 @@ function CoveragePanel({ coverage }: { coverage: CoverageAssignment }) {
         </>
       )}
 
-      <Button variant="secondary" className="text-red-700" onClick={remove}>
+      <Button variant="secondary" className="text-red-700 dark:text-red-300" onClick={remove}>
         <Trash2 aria-hidden className="size-4" />
         Quitar {coverage.type === 'man' ? 'marcaje' : 'zona'}
       </Button>

@@ -2,6 +2,7 @@ import { LogOut } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link, Outlet, useLocation } from 'react-router';
 import { useAuth, useCurrentUser } from '../auth/auth-context';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { Button } from '../components/ui/button';
 
 /** Cabecera común y transición suave al cambiar de página. */
@@ -22,6 +23,7 @@ export function AppLayout() {
           </Link>
           <div className="flex items-center gap-2">
             <span className="hidden text-sm text-white/80 sm:inline">{user.name}</span>
+            <ThemeToggle className="text-white hover:bg-white/15" />
             <Button
               variant="ghost"
               className="text-white hover:bg-white/15"

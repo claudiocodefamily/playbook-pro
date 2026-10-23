@@ -81,7 +81,7 @@ export function PlayerPanel() {
           {player.side === 'O' && <BallSection player={player} />}
           <Button
             variant="secondary"
-            className="text-red-700"
+            className="text-red-700 dark:text-red-300"
             onClick={() => apply((diagram) => removePlayer(diagram, player.id))}
           >
             <Trash2 aria-hidden className="size-4" />
@@ -96,7 +96,10 @@ export function PlayerPanel() {
           exit={{ opacity: 0 }}
           className="flex items-start gap-3 text-sm text-slate-600"
         >
-          <MousePointerClick aria-hidden className="size-5 shrink-0 text-turf-700" />
+          <MousePointerClick
+            aria-hidden
+            className="size-5 shrink-0 text-turf-700 dark:text-turf-300"
+          />
           <p>
             Arrastra a los jugadores para colocarlos y toca uno para cambiar su etiqueta. Para
             dibujar, elige Ruta, Bloqueo o Motion encima de la cancha y arrastra desde el jugador.

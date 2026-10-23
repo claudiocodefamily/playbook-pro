@@ -13,7 +13,7 @@ export function ErrorAlert({ message }: { message?: string | null }) {
           exit={{ opacity: 0, height: 0 }}
           className="overflow-hidden"
         >
-          <div className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
+          <div className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200 dark:bg-red-950/50 dark:text-red-200 dark:ring-red-900">
             <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
             <span>{message}</span>
           </div>

@@ -55,7 +55,10 @@ export function RegisterPage() {
       </form>
       <p className="mt-6 text-center text-sm text-slate-600">
         ¿Ya tienes cuenta?{' '}
-        <Link to="/login" className="font-semibold text-turf-700 hover:underline">
+        <Link
+          to="/login"
+          className="font-semibold text-turf-700 dark:text-turf-300 hover:underline"
+        >
           Inicia sesión
         </Link>
       </p>

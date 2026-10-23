@@ -1,15 +1,21 @@
 @import 'tailwindcss';
 
+/* `dark:` se activa con la clase .dark en <html> (la pone lib/theme.ts), no solo con el sistema. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Colores de la marca: verde de cancha y un acento amarillo como las líneas de primer down. */
 @theme {
   --color-turf-50: #f0f9f1;
   --color-turf-100: #dcf1df;
+  --color-turf-300: #86d293;
   --color-turf-600: #2f7d3b;
   --color-turf-700: #24642f;
   --color-turf-800: #1d5027;
   --color-turf-900: #163d1e;
   --color-chalk: #f8fafc;
   --color-first-down: #facc15;
+  /* Fondo de tarjetas, paneles y campos de texto. */
+  --color-surface: #ffffff;
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -22,5 +28,28 @@
 
   body {
     @apply bg-slate-100 text-slate-900 antialiased;
+  }
+}
+
+/*
+ * Modo oscuro. La escala slate (grises de textos, bordes y fondos) se invierte: así
+ * `text-slate-900` pasa a ser casi blanco y `bg-slate-100` casi negro sin repetir `dark:`
+ * en cada componente. Los colores con tinte (avisos, chips) llevan su propio `dark:`.
+ */
+@layer base {
+  .dark {
+    color-scheme: dark;
+    --color-surface: #131c2e;
+    --color-slate-50: #1c2739;
+    --color-slate-100: #0b1120;
+    --color-slate-200: #263247;
+    --color-slate-300: #36435a;
+    --color-slate-400: #64748b;
+    --color-slate-500: #94a3b8;
+    --color-slate-600: #a9b6c8;
+    --color-slate-700: #cbd5e1;
+    --color-slate-800: #e2e8f0;
+    --color-slate-900: #f1f5f9;
+    --color-slate-950: #f8fafc;
   }
 }

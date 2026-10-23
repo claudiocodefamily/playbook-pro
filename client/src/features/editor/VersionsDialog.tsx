@@ -97,8 +97,8 @@ export function VersionsDialog({
                   className={cn(
                     'flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 text-left text-sm ring-1',
                     entry.version === selected
-                      ? 'bg-turf-50 font-semibold text-turf-900 ring-turf-600'
-                      : 'bg-white ring-slate-200 hover:bg-slate-50',
+                      ? 'bg-turf-50 font-semibold text-turf-900 ring-turf-600 dark:bg-turf-900/50 dark:text-turf-50'
+                      : 'bg-surface ring-slate-200 hover:bg-slate-50',
                   )}
                 >
                   <span>

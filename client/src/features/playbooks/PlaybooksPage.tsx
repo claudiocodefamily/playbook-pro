@@ -60,7 +60,7 @@ export function PlaybooksPage() {
               'relative min-h-11 shrink-0 rounded-full px-5 text-sm font-semibold transition-colors',
               filter === side
                 ? 'text-white'
-                : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50',
+                : 'bg-surface text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50',
             )}
           >
             {filter === side && (
@@ -104,7 +104,7 @@ export function PlaybooksPage() {
               >
                 <Link
                   to={`/teams/${teamId}/playbooks/${playbook.id}`}
-                  className="flex h-full flex-col gap-3 rounded-3xl bg-white p-5 pr-16 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
+                  className="flex h-full flex-col gap-3 rounded-3xl bg-surface p-5 pr-16 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
                 >
                   <span
                     className={cn(
