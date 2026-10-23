@@ -43,6 +43,7 @@ import { EditorContext, useEditor } from './editor-context';
 import { createEditorStore, type EditorStore } from './editor-store';
 import { FieldCanvas } from './FieldCanvas';
 import { PlaybackBar } from './PlaybackBar';
+import { FocusBar } from './FocusBar';
 import { NotesPanel, PresentationNotes } from './NotesPanel';
 import { PlayerPanel } from './PlayerPanel';
 import { SaveIndicator } from './SaveIndicator';
@@ -199,7 +200,7 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
             )}
             style={{
               // Lo que queda de alto tras la barra de herramientas y la de reproducción.
-              maxWidth: presenting ? undefined : `calc((100dvh - 20rem) * ${aspect})`,
+              maxWidth: presenting ? undefined : `calc((100dvh - 23rem) * ${aspect})`,
             }}
           >
             {presenting ? (
@@ -228,7 +229,7 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
             <div className={cn(presenting && 'flex flex-col gap-3 lg:flex-row lg:justify-center')}>
               <div
                 className={cn('mx-auto w-full', presenting && 'lg:mx-0')}
-                style={presenting ? { maxWidth: `calc((100dvh - 9.5rem) * ${aspect})` } : undefined}
+                style={presenting ? { maxWidth: `calc((100dvh - 13rem) * ${aspect})` } : undefined}
               >
                 <FieldCanvas
                   ruleset={ruleset}
@@ -246,6 +247,9 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
                 trails={showTrails}
                 onToggleTrails={() => setShowTrails((value) => !value)}
               />
+            </div>
+            <div className={cn('w-full', presenting && 'mx-auto max-w-4xl')}>
+              <FocusBar large={presenting} />
             </div>
           </div>
           <TimelinePanel playback={playback} />

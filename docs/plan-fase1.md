@@ -926,9 +926,15 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - Las jugadas guardan `conceptIds` (ya existía en el schema); la API comprueba que el equipo ve esos conceptos. En el editor se añaden con un buscador y se guardan con la misma `version` que el autoguardado.
 - Las notas son `diagram.notes`. En el modo presentación, notas y conceptos se ven junto a la cancha.
 
+**6c. Modo jugador** (hecho): debajo de los controles de la animación, "Modo jugador" elige un jugador o una posición entera (por ejemplo, todos los OL).
+
+- La cancha deja en segundo plano a los demás jugadores y sus trazos; también funciona en el modo presentación y durante la animación.
+- Con un jugador, se explica su tarea en frases y en orden de tiempo: motion, ruta, bloqueo (a quién), cobertura, y qué hace con el balón (recibe el snap, lanza a X, recibe el pase…). Lo calcula `features/editor/focus.ts`.
+- Es solo de visualización: no se guarda en la jugada.
+
 **Sigue**
 
-- Fase 3: modo jugador, links de solo lectura y cuentas de jugadores.
+- Fase 3: links de solo lectura y cuentas de jugadores.
 - Fase 4: exportar a PNG/PDF, quizzes y game plan.
 
 **Decisiones pendientes**

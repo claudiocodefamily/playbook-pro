@@ -42,6 +42,7 @@ import {
   removeDrawing,
 } from './diagram-ops';
 import { useEditor } from './editor-context';
+import { focusedIds } from './focus';
 
 const PLAYER_RADIUS = 1; // yardas: con la línea a 2 yardas, los jugadores se tocan sin solaparse
 const MIN_RADIUS = 12; // px, para que la etiqueta se lea en un móvil
@@ -61,6 +62,9 @@ const COLORS = {
   endZone: '#1d5027',
   coverage: '#fbbf24',
 };
+/** Opacidad de los jugadores que no son el del modo jugador. */
+const FADED = 0.2;
+
 /** La goma borra el trazo del lápiz que pasa a menos de esta distancia del dedo, en yardas. */
 const ERASER_YARDS = 1;
 
@@ -129,6 +133,7 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
     setSketchState(next);
   };
   const pencilColor = useEditor((state) => state.pencilColor);
+  const focus = useEditor((state) => state.focus);
   const setDraft = (next: Draft | null) => {
     draftRef.current = next;
     setDraftState(next);
@@ -143,6 +148,9 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
   const toDiagram = (screen: { x: number; y: number }): Point =>
     fromScreen({ x: screen.x / scale, y: screen.y / scale }, window);
   const origins = pathOrigins(diagram);
+  // Modo jugador: los demás quedan en segundo plano para que se vea solo su tarea.
+  const focused = focusedIds(diagram, focus);
+  const faded = (playerId: string) => (focused && !focused.has(playerId) ? FADED : 1);
   const positions = playbackTime === null ? null : animatedPositions(diagram, playbackTime);
   const positionOf = (player: DiagramPlayer): Point => positions?.get(player.id) ?? player;
   const flights = useMemo(() => ballFlights(diagram), [diagram]);
@@ -367,19 +375,20 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
                   ? diagram.players.find((player) => player.id === coverage.targetPlayerId)
                   : undefined;
               return (
-                <CoverageShape
-                  key={coverage.id}
-                  coverage={coverage}
-                  from={px(positionOf(defender))}
-                  to={target ? px(positionOf(target)) : undefined}
-                  toScreen={px}
-                  toDiagram={toDiagram}
-                  scale={scale}
-                  selected={coverage.id === selectedAssignmentId}
-                  dimmed={playbackTime !== null}
-                  onSelect={() => selectAssignment(coverage.id)}
-                  onMove={(center) => apply((current) => moveZone(current, coverage.id, center))}
-                />
+                <Group key={coverage.id} opacity={faded(coverage.playerId)}>
+                  <CoverageShape
+                    coverage={coverage}
+                    from={px(positionOf(defender))}
+                    to={target ? px(positionOf(target)) : undefined}
+                    toScreen={px}
+                    toDiagram={toDiagram}
+                    scale={scale}
+                    selected={coverage.id === selectedAssignmentId}
+                    dimmed={playbackTime !== null}
+                    onSelect={() => selectAssignment(coverage.id)}
+                    onMove={(center) => apply((current) => moveZone(current, coverage.id, center))}
+                  />
+                </Group>
               );
             })}
             {diagram.assignments.filter(isPathAssignment).map((assignment) => {
@@ -391,19 +400,20 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
               // En la animación, la T acompaña al bloqueador y al rival.
               const from = (target ? positions?.get(assignment.playerId) : undefined) ?? origin;
               return (
-                <AssignmentShape
-                  key={assignment.id}
-                  assignment={assignment}
-                  points={
-                    target
-                      ? [px(from), px(blockContact(from, positionOf(target)))]
-                      : [origin, ...assignment.points].map(px)
-                  }
-                  scale={scale}
-                  selected={assignment.id === selectedAssignmentId}
-                  dimmed={playbackTime !== null}
-                  onSelect={() => selectAssignment(assignment.id)}
-                />
+                <Group key={assignment.id} opacity={faded(assignment.playerId)}>
+                  <AssignmentShape
+                    assignment={assignment}
+                    points={
+                      target
+                        ? [px(from), px(blockContact(from, positionOf(target)))]
+                        : [origin, ...assignment.points].map(px)
+                    }
+                    scale={scale}
+                    selected={assignment.id === selectedAssignmentId}
+                    dimmed={playbackTime !== null}
+                    onSelect={() => selectAssignment(assignment.id)}
+                  />
+                </Group>
               );
             })}
             {playbackTime === null &&
@@ -494,7 +504,7 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
                     })}
                     stroke={player.side === 'O' ? COLORS.offense : COLORS.defense}
                     strokeWidth={Math.max(3, 0.35 * scale)}
-                    opacity={0.45}
+                    opacity={0.45 * faded(player.id)}
                     lineCap="round"
                     lineJoin="round"
                   />
@@ -505,20 +515,21 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
 
           <Layer>
             {diagram.players.map((player) => (
-              <PlayerNode
-                key={player.id}
-                player={player}
-                position={px(positionOf(player))}
-                instant={positions !== null}
-                draggable={!drawing && playbackTime === null}
-                drawing={drawing}
-                radius={playerRadius}
-                selected={player.id === selectedId}
-                toDiagram={toDiagram}
-                toScreen={px}
-                bounds={{ width, height }}
-                onStartDraw={startDraw}
-              />
+              <Group key={player.id} opacity={faded(player.id)}>
+                <PlayerNode
+                  player={player}
+                  position={px(positionOf(player))}
+                  instant={positions !== null}
+                  draggable={!drawing && playbackTime === null}
+                  drawing={drawing}
+                  radius={playerRadius}
+                  selected={player.id === selectedId}
+                  toDiagram={toDiagram}
+                  toScreen={px}
+                  bounds={{ width, height }}
+                  onStartDraw={startDraw}
+                />
+              </Group>
             ))}
           </Layer>
 
