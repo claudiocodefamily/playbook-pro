@@ -25,6 +25,7 @@ import { cn } from '../../lib/cn';
 import { errorText } from '../../lib/errors';
 import { SIDE_LABELS } from '../../lib/labels';
 import { SIDE_STYLE } from '../playbooks/side-style';
+import { ExportPlaybookButton } from '../export/ExportButtons';
 import { FormationPicker } from './FormationPicker';
 import { ShareDialog } from './ShareDialog';
 
@@ -75,7 +76,9 @@ export function PlaybookPage() {
         }
         back={{ to: `/teams/${teamId}`, label: 'Playbooks' }}
         actions={
-          isCoach && (
+          !isCoach ? (
+            <ExportPlaybookButton teamId={teamId} playbook={playbook.data} />
+          ) : (
             <>
               <Button
                 variant="secondary"
@@ -97,6 +100,7 @@ export function PlaybookPage() {
                 )}
                 {shownToPlayers ? 'Lo ven los jugadores' : 'Oculto a jugadores'}
               </Button>
+              <ExportPlaybookButton teamId={teamId} playbook={playbook.data} />
               <Button
                 variant="secondary"
                 onClick={() => setSharing(true)}

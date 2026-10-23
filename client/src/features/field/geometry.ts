@@ -89,3 +89,9 @@ export function diagramReach(diagram: PlayDiagram): number {
     ...diagram.ball.carrierTimeline.map((entry) => (entry.target?.y ?? 0) + 3),
   );
 }
+
+/** Ventana para mirar una jugada que no cambia (visor, exportar): todo cabe, también campo abajo. */
+export function viewWindow(diagram: PlayDiagram): FieldWindow {
+  const base = diagramWindow(diagram);
+  return { ...base, maxY: Math.max(base.maxY, diagramReach(diagram)) };
+}

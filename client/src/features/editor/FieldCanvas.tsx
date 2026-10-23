@@ -7,7 +7,7 @@ import {
   type Ruleset,
 } from '@playbook/shared';
 import Konva from 'konva';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type Ref, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Arrow, Circle, Ellipse, Group, Layer, Line, Rect, Stage, Text } from 'react-konva';
 import {
   FIELD_WIDTH,
@@ -104,6 +104,10 @@ interface FieldCanvasProps {
   showTrails: boolean;
   /** Solo para mirar (links compartidos): no se arrastra, dibuja ni selecciona nada. */
   readOnly?: boolean;
+  /** Los rayones del lápiz. Al exportar se pueden ocultar. */
+  showDrawings?: boolean;
+  /** El Stage de Konva, para sacar una imagen de la cancha al exportar. */
+  stageRef?: Ref<Konva.Stage>;
 }
 
 /**
@@ -116,6 +120,8 @@ export function FieldCanvas({
   playbackTime,
   showTrails,
   readOnly = false,
+  showDrawings = true,
+  stageRef,
 }: FieldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const width = useContainerWidth(containerRef);
@@ -300,6 +306,7 @@ export function FieldCanvas({
           width={width}
           height={height}
           listening={!readOnly}
+          ref={stageRef}
           onClick={(event) => deselectOnField(event.target)}
           onTap={(event) => deselectOnField(event.target)}
           onPointerMove={(event) => {
@@ -545,7 +552,7 @@ export function FieldCanvas({
           {/* Los dibujos del lápiz van encima de todo: son las rayas del coach sobre la pizarra. */}
           <Layer listening={sketching && playbackTime === null}>
             {[
-              ...diagram.drawings,
+              ...(showDrawings ? diagram.drawings : []),
               ...(sketch && tool === 'pencil'
                 ? [{ id: 'sketch', color: pencilColor, points: sketch }]
                 : []),
