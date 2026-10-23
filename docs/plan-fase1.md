@@ -919,9 +919,16 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - La goma borra el trazo que toca; "Borrar dibujos" los quita todos. Todo se puede deshacer.
 - Al duplicar una jugada, los dibujos se copian con ids nuevos. En 7a, la exportación los incluirá (opcional).
 
+**6b. Notas y glosario** (hecho): pestaña Glosario en el equipo y sección "Notas y conceptos" en el editor.
+
+- Módulo `concepts` en la API (`/api/teams/:teamId/concepts`): `{ teamId | null, name, side, explanation }`. Los globales (`teamId: null`, 25 conceptos de ataque, defensa y special teams con la explicación en español) se cargan al arrancar y no se editan; se pueden copiar al equipo.
+- `GET .../concepts` devuelve también cuántas jugadas del equipo enseñan cada concepto, y `GET .../concepts/:id/plays` las lista. Al borrar un concepto propio se quita de sus jugadas.
+- Las jugadas guardan `conceptIds` (ya existía en el schema); la API comprueba que el equipo ve esos conceptos. En el editor se añaden con un buscador y se guardan con la misma `version` que el autoguardado.
+- Las notas son `diagram.notes`. En el modo presentación, notas y conceptos se ven junto a la cancha.
+
 **Sigue**
 
-- Fase 3: notas y glosario, modo jugador, links de solo lectura y cuentas de jugadores.
+- Fase 3: modo jugador, links de solo lectura y cuentas de jugadores.
 - Fase 4: exportar a PNG/PDF, quizzes y game plan.
 
 **Decisiones pendientes**

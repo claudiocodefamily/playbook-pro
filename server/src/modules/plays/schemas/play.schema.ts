@@ -25,7 +25,7 @@ export class Play {
   @Prop({ type: [String], default: [] })
   tags!: string[];
 
-  // Conceptos que enseña la jugada (Mesh, Cover 2...). Se usarán en la Fase 3.
+  // Conceptos del glosario que enseña la jugada (Mesh, Cover 2...).
   @Prop({ type: [String], ref: 'Concept', default: [] })
   conceptIds!: string[];
 

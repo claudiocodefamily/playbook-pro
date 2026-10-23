@@ -1,4 +1,4 @@
-import { BookOpen, ShieldCheck, Users } from 'lucide-react';
+import { BookMarked, BookOpen, ShieldCheck, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { NavLink } from 'react-router';
 import { cn } from '../lib/cn';
@@ -6,10 +6,11 @@ import { cn } from '../lib/cn';
 const TABS = [
   { to: '', label: 'Playbooks', icon: BookOpen },
   { to: 'roster', label: 'Roster', icon: Users },
+  { to: 'glossary', label: 'Glosario', icon: BookMarked },
   { to: 'coaches', label: 'Coaches', icon: ShieldCheck },
 ] as const;
 
-/** Pestañas del equipo: sus playbooks, su roster de jugadores y sus coaches. */
+/** Pestañas del equipo: sus playbooks, su roster, su glosario y sus coaches. */
 export function TeamNav({ teamId }: { teamId: string }) {
   return (
     <nav

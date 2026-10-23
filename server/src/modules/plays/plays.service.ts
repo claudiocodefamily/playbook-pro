@@ -9,6 +9,7 @@ import {
   type PlayDiagram,
 } from '@playbook/shared';
 import type { ClientSession, Connection, Model } from 'mongoose';
+import { ConceptsService } from '../concepts/concepts.service.js';
 import { FormationsService } from '../formations/formations.service.js';
 import { PlaybooksService } from '../playbooks/playbooks.service.js';
 import type { CreatePlayDto } from './dto/create-play.dto.js';
@@ -33,6 +34,7 @@ export class PlaysService {
     @InjectConnection() private readonly connection: Connection,
     private readonly playbooks: PlaybooksService,
     private readonly formations: FormationsService,
+    private readonly concepts: ConceptsService,
   ) {}
 
   /**
@@ -46,6 +48,7 @@ export class PlaysService {
     dto: CreatePlayDto,
   ): Promise<PlayDocument> {
     await this.playbooks.findOne(teamId, playbookId);
+    await this.concepts.assertVisible(teamId, dto.conceptIds ?? []);
 
     let diagram: PlayDiagram = dto.diagram
       ? PlayDiagramSchema.parse(dto.diagram)
@@ -63,6 +66,7 @@ export class PlaysService {
       name: dto.name,
       formationId: dto.formationId ?? null,
       tags: dto.tags ?? [],
+      conceptIds: dto.conceptIds ?? [],
       diagram,
       createdBy: userId,
       updatedBy: userId,
@@ -114,12 +118,16 @@ export class PlaysService {
     if (dto.formationId) {
       await this.formations.findOne(teamId, dto.formationId);
     }
+    if (dto.conceptIds) {
+      await this.concepts.assertVisible(teamId, dto.conceptIds);
+    }
 
     const set: Partial<Play> = { updatedBy: userId };
     if (dto.name !== undefined) set.name = dto.name;
     if (dto.playbookId !== undefined) set.playbookId = dto.playbookId;
     if (dto.formationId !== undefined) set.formationId = dto.formationId;
     if (dto.tags !== undefined) set.tags = dto.tags;
+    if (dto.conceptIds !== undefined) set.conceptIds = dto.conceptIds;
     if (dto.diagram !== undefined) set.diagram = PlayDiagramSchema.parse(dto.diagram);
 
     const apply = async (session?: ClientSession): Promise<PlayDocument> => {

@@ -748,3 +748,12 @@ export function removeDrawing(diagram: PlayDiagram, drawingId: string): PlayDiag
 export function clearDrawings(diagram: PlayDiagram): PlayDiagram {
   return diagram.drawings.length === 0 ? diagram : { ...diagram, drawings: [] };
 }
+
+/** Notas de la jugada para el coach y los jugadores (se ven en el modo presentación). */
+export function setNotes(diagram: PlayDiagram, notes: string): PlayDiagram {
+  const trimmed = notes.slice(0, MAX_NOTES);
+  return trimmed === diagram.notes ? diagram : { ...diagram, notes: trimmed };
+}
+
+/** Lo mismo que admite el esquema. */
+export const MAX_NOTES = 5000;

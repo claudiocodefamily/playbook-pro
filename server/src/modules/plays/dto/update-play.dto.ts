@@ -12,7 +12,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { MatchesZod } from '../../../common/validators/matches-zod.validator.js';
-import { PlayDiagramField, PlayTags } from './play-fields.js';
+import { PlayConceptIds, PlayDiagramField, PlayTags } from './play-fields.js';
 
 export class UpdatePlayDto {
   @ApiProperty({
@@ -52,6 +52,9 @@ export class UpdatePlayDto {
 
   @PlayTags()
   tags?: string[];
+
+  @PlayConceptIds()
+  conceptIds?: string[];
 
   @PlayDiagramField('Reemplaza el diagram completo.')
   diagram?: PlayDiagramInput;

@@ -51,6 +51,20 @@ export interface RosterPlayer {
   updatedAt: string;
 }
 
+/** Un término del glosario (Mesh, Cover 2...): del equipo o global. */
+export interface Concept {
+  id: string;
+  teamId: string | null;
+  isGlobal: boolean;
+  name: string;
+  side: PlaybookSide;
+  explanation: string;
+  /** Jugadas del equipo que lo enseñan. */
+  playCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Firma para subir una foto directamente a Cloudinary. */
 export interface UploadSignature {
   uploadUrl: string;
@@ -87,6 +101,8 @@ export interface PlaySummary {
   name: string;
   formationId: string | null;
   tags: string[];
+  /** Conceptos del glosario que enseña la jugada. */
+  conceptIds: string[];
   version: number;
   createdBy: string;
   updatedBy: string;

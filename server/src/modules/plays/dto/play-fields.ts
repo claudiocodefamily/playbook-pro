@@ -1,11 +1,31 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { DIAGRAM_SCHEMA_VERSION, PlayDiagramSchema } from '@playbook/shared';
+import { DIAGRAM_SCHEMA_VERSION, PlayDiagramSchema, UuidSchema } from '@playbook/shared';
 import { Transform } from 'class-transformer';
 import { ArrayMaxSize, ArrayUnique, IsArray, IsOptional, IsString, Length } from 'class-validator';
 import { MatchesZod } from '../../../common/validators/matches-zod.validator.js';
 
 export const MAX_TAGS = 20;
+export const MAX_CONCEPTS = 20;
+
+/** Conceptos del glosario que enseña la jugada (Mesh, Cover 2...). */
+export function PlayConceptIds(): PropertyDecorator {
+  return applyDecorators(
+    ApiPropertyOptional({
+      type: [String],
+      format: 'uuid',
+      maxItems: MAX_CONCEPTS,
+      description: 'Ids de conceptos del glosario del equipo o globales',
+    }),
+    IsOptional(),
+    IsArray(),
+    ArrayMaxSize(MAX_CONCEPTS, {
+      message: `Una jugada enseña como máximo ${MAX_CONCEPTS} conceptos`,
+    }),
+    ArrayUnique({ message: 'Hay conceptos repetidos' }),
+    MatchesZod(UuidSchema, { each: true, message: 'Algún concepto no es un UUIDv7 válido' }),
+  );
+}
 
 /** Etiquetas de una jugada: sin espacios sobrantes, en minúsculas y sin repetir. */
 export function PlayTags(): PropertyDecorator {

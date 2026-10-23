@@ -43,6 +43,7 @@ import { EditorContext, useEditor } from './editor-context';
 import { createEditorStore, type EditorStore } from './editor-store';
 import { FieldCanvas } from './FieldCanvas';
 import { PlaybackBar } from './PlaybackBar';
+import { NotesPanel, PresentationNotes } from './NotesPanel';
 import { PlayerPanel } from './PlayerPanel';
 import { SaveIndicator } from './SaveIndicator';
 import { TimelinePanel } from './TimelinePanel';
@@ -224,16 +225,19 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
                 </Button>
               </div>
             )}
-            <div
-              className="mx-auto w-full"
-              style={presenting ? { maxWidth: `calc((100dvh - 9.5rem) * ${aspect})` } : undefined}
-            >
-              <FieldCanvas
-                ruleset={ruleset}
-                window={fieldWindow}
-                playbackTime={playback.time}
-                showTrails={showTrails}
-              />
+            <div className={cn(presenting && 'flex flex-col gap-3 lg:flex-row lg:justify-center')}>
+              <div
+                className={cn('mx-auto w-full', presenting && 'lg:mx-0')}
+                style={presenting ? { maxWidth: `calc((100dvh - 9.5rem) * ${aspect})` } : undefined}
+              >
+                <FieldCanvas
+                  ruleset={ruleset}
+                  window={fieldWindow}
+                  playbackTime={playback.time}
+                  showTrails={showTrails}
+                />
+              </div>
+              {presenting && <PresentationNotes teamId={play.teamId} playId={play.id} />}
             </div>
             <div className={cn('w-full', presenting && 'mx-auto max-w-4xl')}>
               <PlaybackBar
@@ -252,6 +256,11 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
             <PlayerPanel />
           </section>
           <SidePanel teamId={play.teamId} side={side} ruleset={ruleset} />
+          <NotesPanel
+            teamId={play.teamId}
+            playId={play.id}
+            onSaveConcepts={autosave.saveConcepts}
+          />
         </aside>
       </div>
     </EditorContext>

@@ -1,4 +1,9 @@
-import { type InputHTMLAttributes, type SelectHTMLAttributes, useId } from 'react';
+import {
+  type InputHTMLAttributes,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  useId,
+} from 'react';
 import { cn } from '../../lib/cn';
 
 const controlClass =
@@ -56,6 +61,33 @@ export function SelectField({
         {children}
       </select>
       {hint && <p className="text-sm text-slate-500">{hint}</p>}
+    </div>
+  );
+}
+
+export function TextAreaField({
+  label,
+  hint,
+  className,
+  ...props
+}: FieldProps & TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const id = useId();
+  return (
+    <div className={cn('flex flex-col gap-1.5', className)}>
+      <label htmlFor={id} className="text-sm font-medium text-slate-700">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        className={cn(controlClass, 'resize-y py-2.5 leading-relaxed')}
+        aria-describedby={hint ? `${id}-help` : undefined}
+        {...props}
+      />
+      {hint && (
+        <p id={`${id}-help`} className="text-sm text-slate-500">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
