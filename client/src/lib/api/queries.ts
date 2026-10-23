@@ -1,6 +1,8 @@
 import { type PlaybookSide } from '@playbook/shared';
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  type ConceptInput,
+  conceptsApi,
   formationsApi,
   playbooksApi,
   type PlayFilters,
@@ -27,6 +29,16 @@ export const queries = {
     queryOptions({
       queryKey: ['teams', teamId, 'roster'],
       queryFn: () => rosterApi.list(teamId),
+    }),
+  concepts: (teamId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'concepts'],
+      queryFn: () => conceptsApi.list(teamId),
+    }),
+  conceptPlays: (teamId: string, conceptId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'concepts', conceptId, 'plays'],
+      queryFn: () => conceptsApi.plays(teamId, conceptId),
     }),
   playbooks: (teamId: string) =>
     queryOptions({
@@ -181,6 +193,28 @@ export function useDeleteRosterPlayer(teamId: string) {
   const changed = useRosterChanged(teamId);
   return useMutation({
     mutationFn: (playerId: string) => rosterApi.remove(teamId, playerId),
+    onSuccess: changed,
+  });
+}
+
+function useConceptsChanged(teamId: string) {
+  const client = useQueryClient();
+  return () => client.invalidateQueries({ queryKey: queries.concepts(teamId).queryKey });
+}
+
+export function useSaveConcept(teamId: string) {
+  const changed = useConceptsChanged(teamId);
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string | null; input: ConceptInput }) =>
+      id ? conceptsApi.update(teamId, id, input) : conceptsApi.create(teamId, input),
+    onSuccess: changed,
+  });
+}
+
+export function useDeleteConcept(teamId: string) {
+  const changed = useConceptsChanged(teamId);
+  return useMutation({
+    mutationFn: (conceptId: string) => conceptsApi.remove(teamId, conceptId),
     onSuccess: changed,
   });
 }

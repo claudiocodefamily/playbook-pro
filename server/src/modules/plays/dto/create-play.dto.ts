@@ -3,7 +3,7 @@ import { UuidSchema, type PlayDiagramInput } from '@playbook/shared';
 import { Transform } from 'class-transformer';
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { MatchesZod } from '../../../common/validators/matches-zod.validator.js';
-import { PlayDiagramField, PlayTags } from './play-fields.js';
+import { PlayConceptIds, PlayDiagramField, PlayTags } from './play-fields.js';
 
 export class CreatePlayDto {
   @ApiProperty({ example: 'Mesh Right', maxLength: 120 })
@@ -24,6 +24,9 @@ export class CreatePlayDto {
 
   @PlayTags()
   tags?: string[];
+
+  @PlayConceptIds()
+  conceptIds?: string[];
 
   @PlayDiagramField('Sin valor, se crea vacío o a partir de la formación.')
   diagram?: PlayDiagramInput;

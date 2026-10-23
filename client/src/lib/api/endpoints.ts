@@ -2,6 +2,7 @@ import type { PlayDiagram, PlaybookSide, Ruleset } from '@playbook/shared';
 import { api } from './client';
 import type {
   AuthResponse,
+  Concept,
   Formation,
   Play,
   Playbook,
@@ -55,6 +56,27 @@ export interface RosterInput {
   photoUrl?: string | null;
   active?: boolean;
 }
+
+export interface ConceptInput {
+  name: string;
+  side: PlaybookSide;
+  explanation: string;
+}
+
+export const conceptsApi = {
+  list: (teamId: string) => api.request<Concept[]>(`/teams/${teamId}/concepts`),
+  create: (teamId: string, input: ConceptInput) =>
+    api.request<Concept>(`/teams/${teamId}/concepts`, { method: 'POST', ...json(input) }),
+  update: (teamId: string, conceptId: string, input: Partial<ConceptInput>) =>
+    api.request<Concept>(`/teams/${teamId}/concepts/${conceptId}`, {
+      method: 'PATCH',
+      ...json(input),
+    }),
+  remove: (teamId: string, conceptId: string) =>
+    api.request<void>(`/teams/${teamId}/concepts/${conceptId}`, { method: 'DELETE' }),
+  plays: (teamId: string, conceptId: string) =>
+    api.request<PlaySummary[]>(`/teams/${teamId}/concepts/${conceptId}/plays`),
+};
 
 export const rosterApi = {
   list: (teamId: string) => api.request<RosterPlayer[]>(`/teams/${teamId}/roster`),
@@ -148,6 +170,7 @@ export const playsApi = {
       version: number;
       name?: string;
       tags?: string[];
+      conceptIds?: string[];
       diagram?: PlayDiagram;
       formationId?: string | null;
       saveVersion?: boolean;

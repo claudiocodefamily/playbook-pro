@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ConceptsModule } from '../concepts/concepts.module.js';
 import { FormationsModule } from '../formations/formations.module.js';
 import { PlaybooksModule } from '../playbooks/playbooks.module.js';
 import { TeamsModule } from '../teams/teams.module.js';
@@ -13,6 +14,7 @@ import { Play, PlaySchema } from './schemas/play.schema.js';
     TeamsModule,
     PlaybooksModule,
     FormationsModule,
+    ConceptsModule,
     MongooseModule.forFeature([
       { name: Play.name, schema: PlaySchema },
       { name: PlayVersion.name, schema: PlayVersionSchema },

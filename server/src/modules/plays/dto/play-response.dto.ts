@@ -22,6 +22,9 @@ export class PlaySummaryResponseDto {
   @ApiProperty({ type: [String] })
   tags!: string[];
 
+  @ApiProperty({ type: [String], format: 'uuid', description: 'Conceptos del glosario que enseña' })
+  conceptIds!: string[];
+
   @ApiProperty({ description: 'Envíala en el PATCH para el bloqueo optimista' })
   version!: number;
 
@@ -65,6 +68,7 @@ function summaryFields(play: PlayDocument): PlaySummaryResponseDto {
     name: play.name,
     formationId: play.formationId,
     tags: [...play.tags],
+    conceptIds: [...play.conceptIds],
     version: play.version,
     createdBy: play.createdBy,
     updatedBy: play.updatedBy,

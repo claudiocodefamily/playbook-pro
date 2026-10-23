@@ -30,13 +30,18 @@ export function useAutosave(store: EditorStore, play: Play) {
 
   /**
    * Guarda lo que hay en pantalla. Con `withVersion` además deja una foto en el historial
-   * ("Guardar versión"). Devuelve true si se guardó.
+   * ("Guardar versión"); con `conceptIds`, cambia los conceptos que enseña la jugada. Van
+   * por aquí para compartir la `version` con el autoguardado. Devuelve true si se guardó.
    */
   const save = useCallback(
-    async (withVersion = false): Promise<boolean> => {
+    async ({
+      withVersion = false,
+      conceptIds,
+    }: { withVersion?: boolean; conceptIds?: string[] } = {}): Promise<boolean> => {
+      const plain = !withVersion && conceptIds === undefined;
       if (inFlight.current) {
-        // Un autoguardado normal ya en marcha basta; una versión espera a que termine.
-        if (!withVersion) return inFlight.current;
+        // Un autoguardado normal ya en marcha basta; lo demás espera a que termine.
+        if (plain) return inFlight.current;
         await inFlight.current;
       }
       const sent: PlayDiagram = store.getState().diagram;
@@ -47,6 +52,7 @@ export function useAutosave(store: EditorStore, play: Play) {
             version: version.current,
             diagram: sent,
             ...(withVersion ? { saveVersion: true } : {}),
+            ...(conceptIds ? { conceptIds } : {}),
           });
           version.current = saved.version;
           store.getState().markSaved(sent);
@@ -101,6 +107,7 @@ export function useAutosave(store: EditorStore, play: Play) {
   return {
     status: status === 'saved' && dirty ? 'pending' : status,
     error,
-    saveVersion: () => save(true),
+    saveVersion: () => save({ withVersion: true }),
+    saveConcepts: (conceptIds: string[]) => save({ conceptIds }),
   };
 }
