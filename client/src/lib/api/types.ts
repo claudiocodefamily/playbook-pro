@@ -127,3 +127,24 @@ export interface PlayVersionSummary {
 export interface PlayVersion extends PlayVersionSummary {
   diagram: PlayDiagram;
 }
+
+/** Un link de solo lectura a un playbook. El token solo llega al crearlo. */
+export interface ShareLink {
+  id: string;
+  playbookId: string;
+  label: string;
+  expiresAt: string | null;
+  createdAt: string;
+  token?: string;
+}
+
+/** Lo que ve quien abre un link compartido: el playbook con sus jugadas y conceptos. */
+export interface SharedPlaybook {
+  teamName: string;
+  ruleset: Ruleset;
+  name: string;
+  side: PlaybookSide;
+  description: string;
+  plays: { id: string; name: string; tags: string[]; conceptIds: string[]; diagram: PlayDiagram }[];
+  concepts: { id: string; name: string; explanation: string }[];
+}

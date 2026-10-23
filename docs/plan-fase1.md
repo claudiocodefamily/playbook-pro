@@ -932,9 +932,17 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - Con un jugador, se explica su tarea en frases y en orden de tiempo: motion, ruta, bloqueo (a quién), cobertura, y qué hace con el balón (recibe el snap, lanza a X, recibe el pase…). Lo calcula `features/editor/focus.ts`.
 - Es solo de visualización: no se guarda en la jugada.
 
+**6d. Links de solo lectura** (hecho): el botón "Compartir" de un playbook crea un link para jugadores, padres o staff que no necesitan cuenta.
+
+- El token sale de `crypto.randomBytes(32)` (43 caracteres base64url) y en Mongo solo se guarda su SHA-256 (`shareLinks.tokenHash`). Por eso el link completo solo se ve al crearlo.
+- Caduca en 1 semana, 1 mes, 6 meses o nunca, y el coach puede desactivarlo cuando quiera (`revokedAt`). Un link revocado, caducado, inventado o de un playbook borrado responde siempre el mismo 404, para no dar pistas.
+- `GET /api/shared/:token` es la única ruta pública. Devuelve el playbook, sus jugadas con el diagram y los conceptos que enseñan, sin ids de equipo, emails ni autores.
+- La página `/shared/:token` reutiliza la cancha del editor en modo `readOnly`, con la animación, las estelas, el modo jugador, las notas y los conceptos.
+- Por ahora se comparte el playbook entero. En vez de `targetType`/`targetId`, una jugada suelta se comparte poniéndola en su propio playbook; si hace falta, se añade después sin romper los links.
+
 **Sigue**
 
-- Fase 3: links de solo lectura y cuentas de jugadores.
+- Fase 3: cuentas de jugadores.
 - Fase 4: exportar a PNG/PDF, quizzes y game plan.
 
 **Decisiones pendientes**

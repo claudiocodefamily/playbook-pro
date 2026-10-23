@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Copy, Plus, Search, Trash2, Zap } from 'lucide-react';
+import { Copy, Plus, Search, Share2, Trash2, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -19,6 +19,7 @@ import { errorText } from '../../lib/errors';
 import { SIDE_LABELS } from '../../lib/labels';
 import { SIDE_STYLE } from '../playbooks/side-style';
 import { FormationPicker } from './FormationPicker';
+import { ShareDialog } from './ShareDialog';
 
 export function PlaybookPage() {
   const { teamId = '', playbookId = '' } = useParams();
@@ -30,6 +31,7 @@ export function PlaybookPage() {
     queries.plays(teamId, playbookId, { ...(q ? { q } : {}), ...(tag ? { tag } : {}) }),
   );
   const [creating, setCreating] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [deleting, setDeleting] = useState<PlaySummary | null>(null);
   const duplicatePlay = useDuplicatePlay(teamId);
   const deletePlay = useDeletePlay(teamId);
@@ -62,7 +64,21 @@ export function PlaybookPage() {
           )
         }
         back={{ to: `/teams/${teamId}`, label: 'Playbooks' }}
-        actions={createButton}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setSharing(true)} disabled={!playbook.data}>
+              <Share2 aria-hidden className="size-4" />
+              Compartir
+            </Button>
+            {createButton}
+          </>
+        }
+      />
+      <ShareDialog
+        open={sharing}
+        teamId={teamId}
+        playbookId={playbookId}
+        onClose={() => setSharing(false)}
       />
 
       <div className="mb-4 flex flex-col gap-3">

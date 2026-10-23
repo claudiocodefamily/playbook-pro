@@ -11,6 +11,7 @@ import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { SharedPlaybookPage } from './features/shared/SharedPlaybookPage';
 
 export const router = createBrowserRouter([
   {
@@ -29,6 +30,8 @@ export const router = createBrowserRouter([
       </GuestOnly>
     ),
   },
+  // Público: lo abre cualquiera con el link, sin cuenta.
+  { path: '/shared/:token', element: <SharedPlaybookPage /> },
   {
     element: (
       <RequireAuth>

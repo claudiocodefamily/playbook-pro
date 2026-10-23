@@ -102,13 +102,21 @@ interface FieldCanvasProps {
   playbackTime: number | null;
   /** Dibuja por dónde ha pasado cada jugador durante la animación. */
   showTrails: boolean;
+  /** Solo para mirar (links compartidos): no se arrastra, dibuja ni selecciona nada. */
+  readOnly?: boolean;
 }
 
 /**
  * La cancha interactiva. Con la herramienta "Mover" se arrastran jugadores; con las de
  * dibujo se arrastra desde un jugador para trazar su ruta, bloqueo, motion o blitz.
  */
-export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: FieldCanvasProps) {
+export function FieldCanvas({
+  ruleset,
+  window,
+  playbackTime,
+  showTrails,
+  readOnly = false,
+}: FieldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const width = useContainerWidth(containerRef);
   const diagram = useEditor((state) => state.diagram);
@@ -291,6 +299,7 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
         <Stage
           width={width}
           height={height}
+          listening={!readOnly}
           onClick={(event) => deselectOnField(event.target)}
           onTap={(event) => deselectOnField(event.target)}
           onPointerMove={(event) => {

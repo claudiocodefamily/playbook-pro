@@ -9,6 +9,7 @@ import { HealthModule } from './modules/health/health.module.js';
 import { PlaybooksModule } from './modules/playbooks/playbooks.module.js';
 import { PlaysModule } from './modules/plays/plays.module.js';
 import { RosterModule } from './modules/roster/roster.module.js';
+import { ShareLinksModule } from './modules/share-links/share-links.module.js';
 import { TeamsModule } from './modules/teams/teams.module.js';
 import { UploadsModule } from './modules/uploads/uploads.module.js';
 import { UsersModule } from './modules/users/users.module.js';
@@ -25,6 +26,7 @@ import { UsersModule } from './modules/users/users.module.js';
     ConceptsModule,
     PlaybooksModule,
     PlaysModule,
+    ShareLinksModule,
     UploadsModule,
     HealthModule,
   ],
