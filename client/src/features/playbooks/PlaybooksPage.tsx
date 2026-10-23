@@ -6,6 +6,7 @@ import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PageHeader } from '../../components/PageHeader';
+import { TeamNav } from '../../components/TeamNav';
 import { ErrorAlert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { EmptyState } from '../../components/ui/empty-state';
@@ -48,6 +49,7 @@ export function PlaybooksPage() {
         back={{ to: '/', label: 'Mis equipos' }}
         actions={createButton}
       />
+      <TeamNav teamId={teamId} />
 
       <div role="tablist" aria-label="Unidad" className="mb-6 flex gap-2 overflow-x-auto pb-1">
         {(['all', ...PLAYBOOK_SIDES] as const).map((side) => (

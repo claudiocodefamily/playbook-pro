@@ -18,6 +18,18 @@ describe('validateEnv', () => {
     });
   });
 
+  it('Cloudinary es opcional, pero sus tres variables van juntas', () => {
+    const cloudinary = {
+      CLOUDINARY_CLOUD_NAME: 'demo',
+      CLOUDINARY_API_KEY: '123',
+      CLOUDINARY_API_SECRET: 'abc',
+    };
+    expect(validateEnv({ ...required, ...cloudinary }).CLOUDINARY_CLOUD_NAME).toBe('demo');
+    expect(() => validateEnv({ ...required, CLOUDINARY_CLOUD_NAME: 'demo' })).toThrow(
+      /CLOUDINARY_API_SECRET/,
+    );
+  });
+
   it('convierte PORT a número', () => {
     expect(validateEnv({ ...required, PORT: '4000' }).PORT).toBe(4000);
   });

@@ -83,9 +83,11 @@ export function movePlayer(diagram: PlayDiagram, playerId: string, to: Point): P
   };
 }
 
-export type PlayerChanges = Partial<Pick<DiagramPlayer, 'label' | 'position' | 'number'>>;
+export type PlayerChanges = Partial<
+  Pick<DiagramPlayer, 'label' | 'position' | 'number' | 'rosterPlayerId'>
+>;
 
-/** Cambia datos del jugador. `number: undefined` le quita el dorsal. */
+/** Cambia datos del jugador. `number` o `rosterPlayerId` a undefined los quitan. */
 export function updatePlayer(
   diagram: PlayDiagram,
   playerId: string,
@@ -95,10 +97,16 @@ export function updatePlayer(
     ...diagram,
     players: diagram.players.map((player) => {
       if (player.id !== playerId) return player;
-      const { number: previous, ...rest } = player;
-      const { number: changed, ...otherChanges } = changes;
-      const number = 'number' in changes ? changed : previous;
-      return { ...rest, ...otherChanges, ...(number === undefined ? {} : { number }) };
+      const { number: previousNumber, rosterPlayerId: previousRoster, ...rest } = player;
+      const { number: changedNumber, rosterPlayerId: changedRoster, ...otherChanges } = changes;
+      const number = 'number' in changes ? changedNumber : previousNumber;
+      const rosterPlayerId = 'rosterPlayerId' in changes ? changedRoster : previousRoster;
+      return {
+        ...rest,
+        ...otherChanges,
+        ...(number === undefined ? {} : { number }),
+        ...(rosterPlayerId === undefined ? {} : { rosterPlayerId }),
+      };
     }),
   };
 }

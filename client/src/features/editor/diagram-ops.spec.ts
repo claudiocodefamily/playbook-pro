@@ -171,6 +171,20 @@ describe('updatePlayer', () => {
     expect(cleared.players[0]).not.toHaveProperty('number');
     expect(cleared.players[0]?.label).toBe('OC');
   });
+
+  it('enlaza al jugador del roster y lo desenlaza sin tocar el dorsal', () => {
+    const diagram = slant();
+    const id = diagram.players[0]?.id ?? '';
+    const rosterPlayerId = newId();
+
+    const linked = updatePlayer(diagram, id, { rosterPlayerId, number: 12 });
+    expect(linked.players[0]).toMatchObject({ rosterPlayerId, number: 12 });
+    expect(PlayDiagramSchema.safeParse(linked).success).toBe(true);
+
+    const unlinked = updatePlayer(linked, id, { rosterPlayerId: undefined });
+    expect(unlinked.players[0]).not.toHaveProperty('rosterPlayerId');
+    expect(unlinked.players[0]?.number).toBe(12);
+  });
 });
 
 describe('simplifyPath y cleanPath', () => {

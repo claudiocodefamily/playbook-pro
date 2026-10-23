@@ -1,4 +1,11 @@
-import type { FormationSlot, PlayDiagram, PlaybookSide, Ruleset } from '@playbook/shared';
+import type {
+  FormationSlot,
+  PlayDiagram,
+  PlaybookSide,
+  Position,
+  Ruleset,
+  TeamRole,
+} from '@playbook/shared';
 
 // Respuestas de la API, tal como las documenta Swagger. Las fechas llegan como texto ISO.
 
@@ -22,6 +29,35 @@ export interface Team {
   memberCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TeamMember {
+  userId: string;
+  name: string;
+  email: string;
+  role: TeamRole;
+  joinedAt: string;
+}
+
+export interface RosterPlayer {
+  id: string;
+  teamId: string;
+  name: string;
+  number: number;
+  positions: Position[];
+  photoUrl?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Firma para subir una foto directamente a Cloudinary. */
+export interface UploadSignature {
+  uploadUrl: string;
+  apiKey: string;
+  timestamp: number;
+  folder: string;
+  signature: string;
 }
 
 export interface Playbook {
