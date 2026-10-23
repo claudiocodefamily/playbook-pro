@@ -912,9 +912,15 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - Empieza cuando acaban sus otros trazos (en el snap si no tiene) y dura 3 s; se ajusta en la línea de tiempo. Sustituye al bloqueo que ya tuviera.
 - Sin cambio de esquema: el punto guardado es la posición del rival al dibujarlo y no mueve al jugador.
 
+**Lápiz** (hecho): herramientas Lápiz y Goma en la barra de la cancha, para rayar como en una pizarra.
+
+- El diagram pasa a la v3: lista `drawings` con trazos a mano alzada (`id`, `color` entre blanco, amarillo, rojo y azul, y `points` en yardas). La migración v2→v3 añade la lista vacía.
+- Los dibujos van encima de todo, se guardan con la jugada y no se animan ni cuentan para la animación. Con el lápiz o la goma activos no se mueve ni se selecciona nada.
+- La goma borra el trazo que toca; "Borrar dibujos" los quita todos. Todo se puede deshacer.
+- Al duplicar una jugada, los dibujos se copian con ids nuevos. En 7a, la exportación los incluirá (opcional).
+
 **Sigue**
 
-- Lápiz: rayar libre sobre la cancha (colores y goma), guardado con la jugada y sin efecto en la animación. Necesita diagram v3.
 - Fase 3: notas y glosario, modo jugador, links de solo lectura y cuentas de jugadores.
 - Fase 4: exportar a PNG/PDF, quizzes y game plan.
 

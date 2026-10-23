@@ -67,5 +67,8 @@ export function cloneDiagramWithNewIds(diagram: PlayDiagram): PlayDiagram {
   for (const entry of copy.ball.carrierTimeline) {
     if (entry.playerId !== undefined) entry.playerId = mapPlayer(entry.playerId);
   }
+  for (const drawing of copy.drawings) {
+    drawing.id = newId();
+  }
   return copy;
 }

@@ -4,6 +4,7 @@ import {
   newId,
   type Assignment,
   type DiagramPlayer,
+  type Drawing,
   type FormationSlot,
   type PlayDiagram,
   type Point,
@@ -691,4 +692,59 @@ export function moveZone(diagram: PlayDiagram, assignmentId: string, center: Poi
         : assignment,
     ),
   };
+}
+
+/** Máximo de trazos del lápiz por jugada (lo mismo que admite el esquema). */
+export const MAX_DRAWINGS = 100;
+/** Máximo de puntos de un trazo del lápiz (el esquema admite 400). */
+const MAX_DRAWING_POINTS = 400;
+/** Tolerancia al simplificar un trazo del lápiz: conserva la forma, quita el temblor. */
+const DRAWING_TOLERANCE = 0.08;
+
+/**
+ * Añade un trazo del lápiz. Es solo dibujo: no se asocia a ningún jugador ni se anima.
+ * Devuelve null si es un toque sin trazo.
+ */
+export function addDrawing(
+  diagram: PlayDiagram,
+  color: Drawing['color'],
+  drawn: readonly Point[],
+): PlayDiagram | null {
+  const precise = (value: number) => Math.round(value * 100) / 100;
+  let points = simplifyPath(
+    drawn.map((point) => clampPoint({ x: precise(point.x), y: precise(point.y) })),
+    DRAWING_TOLERANCE,
+  );
+  for (let tolerance = DRAWING_TOLERANCE * 2; points.length > MAX_DRAWING_POINTS; tolerance *= 2) {
+    points = simplifyPath(points, tolerance);
+  }
+  if (points.length < 2 || pathLength(points) < 0.3) return null;
+  if (diagram.drawings.length >= MAX_DRAWINGS) return null;
+  return { ...diagram, drawings: [...diagram.drawings, { id: newId(), color, points }] };
+}
+
+/** El trazo del lápiz que pasa a menos de `radius` yardas del punto (el más cercano). */
+export function drawingAt(diagram: PlayDiagram, point: Point, radius: number): string | null {
+  let closest: { id: string; distance: number } | null = null;
+  for (const drawing of diagram.drawings) {
+    for (let i = 1; i < drawing.points.length; i++) {
+      const a = drawing.points[i - 1];
+      const b = drawing.points[i];
+      if (!a || !b) continue;
+      const distance = distanceToSegment(point, a, b);
+      if (distance <= radius && (!closest || distance < closest.distance)) {
+        closest = { id: drawing.id, distance };
+      }
+    }
+  }
+  return closest?.id ?? null;
+}
+
+export function removeDrawing(diagram: PlayDiagram, drawingId: string): PlayDiagram {
+  if (!diagram.drawings.some((drawing) => drawing.id === drawingId)) return diagram;
+  return { ...diagram, drawings: diagram.drawings.filter((drawing) => drawing.id !== drawingId) };
+}
+
+export function clearDrawings(diagram: PlayDiagram): PlayDiagram {
+  return diagram.drawings.length === 0 ? diagram : { ...diagram, drawings: [] };
 }

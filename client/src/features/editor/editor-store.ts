@@ -1,9 +1,12 @@
-import type { PlayDiagram } from '@playbook/shared';
+import type { Drawing, PlayDiagram } from '@playbook/shared';
 import { createStore } from 'zustand/vanilla';
 import type { CoverageType, DrawType } from './diagram-ops';
 
 /** Pasos que se pueden deshacer. Cada uno es una copia del diagram (unos pocos KB). */
 export const HISTORY_LIMIT = 100;
+
+/** Herramientas para rayar sobre la cancha como en una pizarra. */
+export type SketchTool = 'pencil' | 'eraser';
 
 export interface EditorState {
   diagram: PlayDiagram;
@@ -15,9 +18,11 @@ export interface EditorState {
   selectedAssignmentId: string | null;
   /**
    * "move" arrastra jugadores; los trazos se dibujan desde el jugador; "man" y "zone"
-   * asignan la cobertura de un defensor.
+   * asignan la cobertura de un defensor; "pencil" y "eraser" rayan libremente sobre la cancha.
    */
-  tool: 'move' | DrawType | CoverageType;
+  tool: 'move' | DrawType | CoverageType | SketchTool;
+  /** Color con el que pinta el lápiz. */
+  pencilColor: Drawing['color'];
   /** true si hay cambios que aún no se guardaron en la API. */
   dirty: boolean;
 
@@ -28,6 +33,7 @@ export interface EditorState {
   select: (playerId: string | null) => void;
   selectAssignment: (assignmentId: string | null) => void;
   setTool: (tool: EditorState['tool']) => void;
+  setPencilColor: (color: Drawing['color']) => void;
   /** Tras guardar en la API: el diagram en pantalla ya está guardado. */
   markSaved: (saved: PlayDiagram) => void;
 }
@@ -42,6 +48,7 @@ export function createEditorStore(initial: PlayDiagram) {
     selectedId: null,
     selectedAssignmentId: null,
     tool: 'move',
+    pencilColor: 'yellow',
     dirty: false,
 
     apply: (change) => {
@@ -93,6 +100,7 @@ export function createEditorStore(initial: PlayDiagram) {
     selectAssignment: (assignmentId) =>
       set({ selectedAssignmentId: assignmentId, selectedId: null }),
     setTool: (tool) => set({ tool }),
+    setPencilColor: (pencilColor) => set({ pencilColor, tool: 'pencil' }),
 
     // Si el coach siguió editando mientras se guardaba, sigue habiendo cambios pendientes.
     markSaved: (saved) => set({ dirty: get().diagram !== saved }),

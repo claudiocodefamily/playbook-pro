@@ -9,6 +9,10 @@ import { describe, expect, it } from 'vitest';
 import { chainEnd, pathOrigins, positionsAt } from '../field/paths';
 import {
   addBallTransfer,
+  addDrawing,
+  clearDrawings,
+  drawingAt,
+  removeDrawing,
   addFieldGoal,
   addKickoff,
   addManCoverage,
@@ -573,5 +577,41 @@ describe('addTargetedBlock', () => {
     // Sin animación de reacción, el X se queda al final de su slant.
     expect(chainEnd(added.diagram, x.id)).toEqual({ x: -14, y: 6 });
     expect(positionsAt(added.diagram, 4).get(x.id)).toEqual({ x: -14, y: 6 });
+  });
+});
+
+describe('lápiz', () => {
+  const wobble = Array.from({ length: 50 }, (_, i) => ({ x: i * 0.2, y: Math.sin(i) * 0.01 }));
+
+  it('guarda el trazo simplificado y válido para el esquema', () => {
+    const drawn = addDrawing(slant(), 'red', wobble);
+    expect(drawn?.drawings).toHaveLength(1);
+    expect(drawn?.drawings[0]?.color).toBe('red');
+    expect(drawn?.drawings[0]?.points.length).toBeLessThan(5);
+    expect(PlayDiagramSchema.safeParse(drawn).success).toBe(true);
+  });
+
+  it('ignora un toque sin trazo y no toca jugadores ni rutas', () => {
+    const play = slant();
+    expect(addDrawing(play, 'white', [{ x: 0, y: 0 }])).toBeNull();
+    const drawn = addDrawing(play, 'white', wobble);
+    expect(drawn?.players).toBe(play.players);
+    expect(drawn?.assignments).toBe(play.assignments);
+  });
+
+  it('la goma borra el trazo que toca y "Borrar dibujos" los quita todos', () => {
+    const one = addDrawing(slant(), 'yellow', wobble);
+    const two =
+      one &&
+      addDrawing(one, 'blue', [
+        { x: 0, y: 10 },
+        { x: 5, y: 10 },
+      ]);
+    if (!two) throw new Error('deberían dibujarse');
+    expect(drawingAt(two, { x: 2, y: 20 }, 1)).toBeNull();
+    const hit = drawingAt(two, { x: 2.5, y: 10.4 }, 1);
+    expect(hit).toBe(two.drawings[1]?.id);
+    expect(hit && removeDrawing(two, hit).drawings.map((d) => d.color)).toEqual(['yellow']);
+    expect(clearDrawings(two).drawings).toEqual([]);
   });
 });
