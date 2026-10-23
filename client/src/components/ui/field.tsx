@@ -2,7 +2,7 @@ import { type InputHTMLAttributes, type SelectHTMLAttributes, useId } from 'reac
 import { cn } from '../../lib/cn';
 
 const controlClass =
-  'min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base shadow-sm transition-colors placeholder:text-slate-400 focus:border-turf-600 focus:outline-none focus:ring-2 focus:ring-turf-600/30 aria-invalid:border-red-500';
+  'min-h-11 w-full rounded-xl border border-slate-300 bg-surface px-3 text-base shadow-sm transition-colors placeholder:text-slate-400 focus:border-turf-600 focus:outline-none focus:ring-2 focus:ring-turf-600/30 aria-invalid:border-red-500 dark:focus:border-turf-100';
 
 interface FieldProps {
   label: string;

@@ -56,9 +56,9 @@ export function TeamsPage() {
             >
               <Link
                 to={`/teams/${team.id}`}
-                className="group flex items-center gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
+                className="group flex items-center gap-4 rounded-3xl bg-surface p-5 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
               >
-                <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-turf-100 text-2xl font-bold text-turf-700">
+                <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-turf-100 text-2xl font-bold text-turf-700 dark:bg-turf-900/60 dark:text-turf-100">
                   {team.logoUrl ? (
                     <img src={team.logoUrl} alt="" className="size-full object-cover" />
                   ) : (

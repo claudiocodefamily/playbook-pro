@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PlayBook Pro</title>
+    <script>
+      // Aplica el tema guardado antes de pintar, para que no parpadee en blanco (ver lib/theme.ts).
+      try {
+        var theme = localStorage.getItem('playbook-theme');
+        var dark = theme ? theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.classList.add('dark');
+      } catch (error) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

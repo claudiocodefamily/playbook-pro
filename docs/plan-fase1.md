@@ -888,10 +888,13 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 
 - Fase 2 (animación): balón animado (snap, handoff, pitch y pase al punto de recepción), línea de tiempo editable con momentos clave y paso a paso, defensa que reacciona (man y zona) y modo presentación con estela.
 
+**Modo oscuro** (hecho): botón en la cabecera que pasa de tema del sistema a claro y a oscuro, guardado en el navegador. En `client/src/index.css` la escala `slate` se invierte bajo `.dark` y las tarjetas usan `bg-surface`; los colores con tinte llevan su propio `dark:`.
+
 **Sigue**
 
-- Pantallas de coaches y roster (la API ya existe desde el bloque 2).
-- Fase 3: coaching (notas, glosario de conceptos, modo jugador, links para compartir y cuentas de jugadores).
+- Special teams: formaciones de field goal/PAT, punt return y kick return, y el balón pateado en la animación.
+- Fase 3: pantallas de roster y coaches, notas y glosario, modo jugador, links de solo lectura y cuentas de jugadores.
+- Fase 4: exportar a PNG/PDF, quizzes y game plan.
 
 **Decisiones pendientes**
 

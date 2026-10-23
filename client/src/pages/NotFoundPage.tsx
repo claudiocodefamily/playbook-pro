@@ -9,7 +9,7 @@ export function NotFoundPage() {
       title="Flag en la jugada: esta página no existe"
       description="Puede que el enlace esté mal o que ya no tengas acceso."
       action={
-        <Link to="/" className="font-semibold text-turf-700 hover:underline">
+        <Link to="/" className="font-semibold text-turf-700 dark:text-turf-300 hover:underline">
           Volver a mis equipos
         </Link>
       }

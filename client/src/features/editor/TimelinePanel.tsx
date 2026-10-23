@@ -10,7 +10,7 @@ import type { Playback } from './usePlayback';
 
 const BAR_STYLES: Readonly<Record<PathAssignment['type'], string>> = {
   route: 'bg-turf-600 text-white',
-  block: 'bg-slate-500 text-white',
+  block: 'bg-gray-500 text-white',
   motion: 'bg-sky-500 text-white',
   blitz: 'bg-red-500 text-white',
 };
@@ -107,8 +107,8 @@ export function TimelinePanel({ playback }: { playback: Playback }) {
 
   if (rows.length === 0 && flights.length === 0) {
     return (
-      <section className="flex items-center gap-3 rounded-2xl bg-white p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-        <Clock aria-hidden className="size-5 shrink-0 text-turf-700" />
+      <section className="flex items-center gap-3 rounded-2xl bg-surface p-4 text-sm text-slate-600 ring-1 ring-slate-200">
+        <Clock aria-hidden className="size-5 shrink-0 text-turf-700 dark:text-turf-300" />
         Cuando dibujes rutas aparecerán aquí. Podrás arrastrarlas para decidir cuándo sale cada
         jugador y cuánto tarda.
       </section>
@@ -122,7 +122,7 @@ export function TimelinePanel({ playback }: { playback: Playback }) {
   const playhead = playback.time;
 
   return (
-    <section className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+    <section className="rounded-2xl bg-surface p-4 ring-1 ring-slate-200">
       <div className="mb-2 flex items-baseline justify-between gap-3">
         <h2 className="font-semibold">Tiempos</h2>
         <p className="text-xs text-slate-500">
@@ -148,7 +148,7 @@ export function TimelinePanel({ playback }: { playback: Playback }) {
                 key={second}
                 className={cn(
                   'absolute top-0 -translate-x-1/2 text-[11px] tabular-nums',
-                  second === 0 ? 'font-bold text-amber-600' : 'text-slate-400',
+                  second === 0 ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-slate-400',
                 )}
                 style={{ left: `${percent(second)}%` }}
               >
@@ -291,7 +291,11 @@ function Row({
       <span
         className={cn(
           'w-12 shrink-0 truncate text-center text-xs font-bold',
-          defense ? 'text-amber-700' : ball ? 'text-amber-900' : 'text-slate-700',
+          defense
+            ? 'text-amber-700 dark:text-amber-400'
+            : ball
+              ? 'text-amber-900 dark:text-amber-200'
+              : 'text-slate-700',
         )}
       >
         {label}
@@ -351,7 +355,7 @@ function BallMarker({
       aria-label={`${BALL_LABELS[flight.action]} a ${receiver ?? '?'}`}
       title={onPointerDown ? 'Arrástralo para cambiar cuándo sale el balón' : undefined}
       className={cn(
-        'absolute top-1 bottom-1 flex touch-none items-center gap-1 overflow-visible rounded-lg bg-amber-200/80 pl-1 text-[11px] font-semibold whitespace-nowrap text-amber-900',
+        'absolute top-1 bottom-1 flex touch-none items-center gap-1 overflow-visible rounded-lg bg-amber-200/80 pl-1 dark:bg-amber-500/40 text-[11px] font-semibold whitespace-nowrap text-amber-900 dark:text-amber-100',
         onPointerDown && 'cursor-grab',
       )}
       style={{ left: `${left}%`, width: `${width}%` }}
@@ -359,7 +363,7 @@ function BallMarker({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
-      <span aria-hidden className="size-2.5 shrink-0 rotate-45 bg-amber-700" />
+      <span aria-hidden className="size-2.5 shrink-0 rotate-45 bg-amber-700 dark:bg-amber-300" />
       {BALL_LABELS[flight.action]} → {receiver}
     </div>
   );

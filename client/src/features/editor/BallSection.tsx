@@ -38,8 +38,11 @@ export function BallSection({ player }: { player: DiagramPlayer }) {
       <h3 className="text-sm font-semibold text-slate-700">Balón</h3>
 
       {own.map(({ entry, index }) => (
-        <div key={`${index}-${entry.t}`} className="flex flex-col gap-1 rounded-xl bg-amber-50 p-2">
-          <div className="flex items-center justify-between gap-2 text-sm font-medium text-amber-900">
+        <div
+          key={`${index}-${entry.t}`}
+          className="flex flex-col gap-1 rounded-xl bg-amber-50 p-2 dark:bg-amber-950/40"
+        >
+          <div className="flex items-center justify-between gap-2 text-sm font-medium text-amber-900 dark:text-amber-200">
             <span>
               {RECEIVES[entry.action ?? 'handoff']}
               {entry.action !== 'snap' && ` · sale a los ${entry.t.toFixed(1)} s`}
@@ -96,7 +99,7 @@ export function BallSection({ player }: { player: DiagramPlayer }) {
       {hasSnap && own.length === 0 && holder !== player.id && (
         <button
           type="button"
-          className="self-start text-xs font-medium text-turf-700 underline"
+          className="self-start text-xs font-medium text-turf-700 dark:text-turf-300 underline"
           onClick={() => apply((diagram) => setSnapReceiver(diagram, player.id))}
         >
           O que reciba él el snap

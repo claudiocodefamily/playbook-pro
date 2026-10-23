@@ -16,7 +16,7 @@ export function PageHeader({ title, subtitle, back, actions }: PageHeaderProps) 
         {back && (
           <Link
             to={back.to}
-            className="mb-1 inline-flex min-h-8 items-center gap-1 text-sm font-medium text-turf-700 hover:underline"
+            className="mb-1 inline-flex min-h-8 items-center gap-1 text-sm font-medium text-turf-700 dark:text-turf-300 hover:underline"
           >
             <ChevronLeft aria-hidden className="size-4" />
             {back.label}

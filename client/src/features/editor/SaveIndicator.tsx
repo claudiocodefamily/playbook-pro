@@ -4,7 +4,11 @@ import { cn } from '../../lib/cn';
 import type { SaveStatus } from './useAutosave';
 
 const STATUS = {
-  saved: { icon: Check, text: 'Guardado', className: 'text-turf-700 bg-turf-50' },
+  saved: {
+    icon: Check,
+    text: 'Guardado',
+    className: 'text-turf-700 bg-turf-50 dark:text-turf-100 dark:bg-turf-900/50',
+  },
   pending: {
     icon: PencilLine,
     text: 'Cambios sin guardar',
@@ -14,12 +18,12 @@ const STATUS = {
   error: {
     icon: CloudOff,
     text: 'Sin conexión, reintentando',
-    className: 'text-amber-800 bg-amber-50',
+    className: 'text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-950/50',
   },
   conflict: {
     icon: TriangleAlert,
     text: 'Otro coach la cambió',
-    className: 'text-red-700 bg-red-50',
+    className: 'text-red-700 bg-red-50 dark:text-red-200 dark:bg-red-950/50',
   },
 } as const;
 

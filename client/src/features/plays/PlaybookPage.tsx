@@ -77,7 +77,7 @@ export function PlaybookPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por nombre o etiqueta (mesh, red zone…)"
-            className="min-h-12 w-full rounded-2xl border border-slate-300 bg-white pr-3 pl-11 text-base shadow-sm focus:border-turf-600 focus:ring-2 focus:ring-turf-600/30 focus:outline-none"
+            className="min-h-12 w-full rounded-2xl border border-slate-300 bg-surface pr-3 pl-11 text-base shadow-sm focus:border-turf-600 focus:ring-2 focus:ring-turf-600/30 focus:outline-none"
           />
         </label>
         {(tags.length > 0 || tag) && (
@@ -91,7 +91,7 @@ export function PlaybookPage() {
                   'min-h-9 rounded-full px-3 text-sm font-medium transition-colors',
                   tag === value
                     ? 'bg-turf-700 text-white'
-                    : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50',
+                    : 'bg-surface text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50',
                 )}
               >
                 #{value}
@@ -136,7 +136,7 @@ export function PlaybookPage() {
               >
                 <Link
                   to={`/teams/${teamId}/plays/${play.id}`}
-                  className="flex h-full flex-col gap-2 rounded-3xl bg-white p-5 pr-28 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
+                  className="flex h-full flex-col gap-2 rounded-3xl bg-surface p-5 pr-28 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
                 >
                   <span className="text-lg font-semibold">{play.name}</span>
                   {play.tags.length > 0 && (
@@ -159,7 +159,7 @@ export function PlaybookPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-slate-400 hover:text-turf-700"
+                    className="text-slate-400 hover:text-turf-700 dark:hover:text-turf-300"
                     aria-label={`Duplicar ${play.name}`}
                     loading={duplicatePlay.isPending && duplicatePlay.variables === play.id}
                     onClick={() => duplicatePlay.mutate(play.id)}
