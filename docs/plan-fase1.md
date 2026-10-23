@@ -898,9 +898,17 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - El balón admite kickoff desde el tee, punt al returner y field goal a los postes.
 - Control "Balón en" para mover la yarda. Se dibujan la end zone y los postes.
 
+**6a. Roster y coaches** (hecho): el equipo tiene pestañas Playbooks / Roster / Coaches.
+
+- Roster: alta y edición de jugadores (dorsal, posiciones, foto, activo o inactivo), con búsqueda y filtros.
+- Coaches: añadirlos por email y quitarlos (nunca al último). Desde ahí también se cambian el nombre y el reglamento del equipo.
+- Las fotos se suben directamente del navegador a Cloudinary con una firma que da la API (`POST /api/teams/:teamId/uploads/roster-photo`). Para activarlo hacen falta las variables `CLOUDINARY_*`; sin ellas, se pega la URL de la foto.
+- En el editor, cada jugador de la cancha se puede enlazar a un jugador del roster (`rosterPlayerId`), que pone su dorsal.
+
 **Sigue**
 
-- Fase 3: pantallas de roster y coaches, notas y glosario, modo jugador, links de solo lectura y cuentas de jugadores.
+- Bloqueo que reacciona: el bloqueador sigue al defensor que tiene asignado.
+- Fase 3: notas y glosario, modo jugador, links de solo lectura y cuentas de jugadores.
 - Fase 4: exportar a PNG/PDF, quizzes y game plan.
 
 **Decisiones pendientes**

@@ -3,6 +3,8 @@ import { GuestOnly, RequireAuth } from './auth/RequireAuth';
 import { PlaybooksPage } from './features/playbooks/PlaybooksPage';
 import { PlaybookPage } from './features/plays/PlaybookPage';
 import { EditorPage } from './features/editor/EditorPage';
+import { RosterPage } from './features/roster/RosterPage';
+import { CoachesPage } from './features/team/CoachesPage';
 import { TeamsPage } from './features/teams/TeamsPage';
 import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
@@ -35,6 +37,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <TeamsPage /> },
       { path: 'teams/:teamId', element: <PlaybooksPage /> },
+      { path: 'teams/:teamId/roster', element: <RosterPage /> },
+      { path: 'teams/:teamId/coaches', element: <CoachesPage /> },
       { path: 'teams/:teamId/playbooks/:playbookId', element: <PlaybookPage /> },
       { path: 'teams/:teamId/plays/:playId', element: <EditorPage /> },
       { path: '*', element: <NotFoundPage /> },

@@ -1,4 +1,7 @@
-import { POSITIONS, type Position } from '@playbook/shared';
+import { type DiagramPlayer, POSITIONS, type Position } from '@playbook/shared';
+import { useQuery } from '@tanstack/react-query';
+import { useParams } from 'react-router';
+import { queries } from '../../lib/api/queries';
 import { MousePointerClick, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Button } from '../../components/ui/button';
@@ -78,6 +81,7 @@ export function PlayerPanel() {
               }
             }}
           />
+          <RosterLink player={player} />
           <BallSection player={player} />
           <Button
             variant="secondary"
@@ -108,5 +112,46 @@ export function PlayerPanel() {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Qué jugador del roster hace este papel. Pone su dorsal en la cancha; más adelante
+ * servirá para que cada jugador vea solo su asignación.
+ */
+function RosterLink({ player }: { player: DiagramPlayer }) {
+  const { teamId = '' } = useParams();
+  const roster = useQuery(queries.roster(teamId));
+  const apply = useEditor((state) => state.apply);
+  const options = (roster.data ?? []).filter(
+    (candidate) => candidate.active || candidate.id === player.rosterPlayerId,
+  );
+  if (options.length === 0) return null;
+
+  return (
+    <SelectField
+      label="Jugador del roster"
+      value={player.rosterPlayerId ?? ''}
+      onChange={(event) => {
+        const chosen = options.find((candidate) => candidate.id === event.target.value);
+        apply((diagram) =>
+          updatePlayer(
+            diagram,
+            player.id,
+            chosen
+              ? { rosterPlayerId: chosen.id, number: chosen.number }
+              : { rosterPlayerId: undefined },
+          ),
+        );
+      }}
+    >
+      <option value="">Sin asignar</option>
+      {options.map((candidate) => (
+        <option key={candidate.id} value={candidate.id}>
+          #{candidate.number} {candidate.name}
+          {candidate.positions.length > 0 ? ` (${candidate.positions.join(', ')})` : ''}
+        </option>
+      ))}
+    </SelectField>
   );
 }
