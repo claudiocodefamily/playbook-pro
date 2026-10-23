@@ -27,7 +27,7 @@ import type { Play } from '../../lib/api/types';
 import { errorText } from '../../lib/errors';
 import { SIDE_LABELS } from '../../lib/labels';
 import { cn } from '../../lib/cn';
-import { FIELD_WIDTH, type FieldWindow, fitWindow } from '../field/geometry';
+import { diagramReach, diagramWindow, FIELD_WIDTH, type FieldWindow } from '../field/geometry';
 import { momentAt } from '../field/moments';
 import { FormationPicker } from '../plays/FormationPicker';
 import {
@@ -103,28 +103,10 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
   // La estela muestra por dónde pasó cada jugador durante la animación.
   const [showTrails, setShowTrails] = useState(true);
   // La ventana del campo se fija al abrir: si cambiara al arrastrar, la cancha "bailaría".
-  const [baseWindow] = useState<FieldWindow>(() => {
-    const fit = fitWindow([
-      ...play.diagram.players,
-      ...play.diagram.assignments.flatMap((a) => a.points),
-      ...play.diagram.drawings.flatMap((drawing) => drawing.points),
-      // El borde profundo de cada zona (fitWindow ya añade 5 yardas de margen).
-      ...play.diagram.assignments.flatMap((a) =>
-        a.type === 'zone' && a.points[0]
-          ? [{ x: a.points[0].x, y: a.points[0].y + a.zone.depth / 2 - 4 }]
-          : [],
-      ),
-    ]);
-    return { minY: Math.min(-12, fit.minY), maxY: Math.max(18, fit.maxY) };
-  });
+  const [baseWindow] = useState<FieldWindow>(() => diagramWindow(play.diagram));
   // Solo crece si algo queda fuera: un rival puesto campo abajo (un punt return) o una
   // patada a portería. Arrastrar no la cambia: los jugadores no salen de la cancha.
-  const reach = useStore(store, (state) =>
-    Math.max(
-      ...state.diagram.players.map((player) => player.y + 5),
-      ...state.diagram.ball.carrierTimeline.map((entry) => (entry.target?.y ?? 0) + 3),
-    ),
-  );
+  const reach = useStore(store, (state) => diagramReach(state.diagram));
   const fieldWindow = reach > baseWindow.maxY ? { ...baseWindow, maxY: reach } : baseWindow;
   // Ancho máximo para que la cancha completa quepa a lo alto de la pantalla.
   const aspect = FIELD_WIDTH / (fieldWindow.maxY - fieldWindow.minY);

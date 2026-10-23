@@ -1,6 +1,7 @@
 import {
   FIELD_HALF_WIDTH_YARDS,
   HASH_OFFSET_YARDS,
+  type PlayDiagram,
   type Point,
   type Ruleset,
 } from '@playbook/shared';
@@ -57,4 +58,34 @@ export function fitWindow(points: readonly Point[]): FieldWindow {
     minY: Math.floor(Math.min(-10, ...ys.map((y) => y - 4))),
     maxY: Math.ceil(Math.max(15, ...ys.map((y) => y + 5))),
   };
+}
+
+/**
+ * Ventana con la que se abre una jugada: todo lo dibujado (jugadores, rutas, el fondo de
+ * cada zona y los rayones) con al menos 12 yardas de backfield y 18 campo abajo.
+ */
+export function diagramWindow(diagram: PlayDiagram): FieldWindow {
+  const fit = fitWindow([
+    ...diagram.players,
+    ...diagram.assignments.flatMap((a) => a.points),
+    ...diagram.drawings.flatMap((drawing) => drawing.points),
+    // El borde profundo de cada zona (fitWindow ya añade 5 yardas de margen).
+    ...diagram.assignments.flatMap((a) =>
+      a.type === 'zone' && a.points[0]
+        ? [{ x: a.points[0].x, y: a.points[0].y + a.zone.depth / 2 - 4 }]
+        : [],
+    ),
+  ]);
+  return { minY: Math.min(-12, fit.minY), maxY: Math.max(18, fit.maxY) };
+}
+
+/**
+ * Hasta dónde llega campo abajo lo que no se ve en las rutas: un rival puesto campo abajo
+ * (un punt return) o el destino de una patada.
+ */
+export function diagramReach(diagram: PlayDiagram): number {
+  return Math.max(
+    ...diagram.players.map((player) => player.y + 5),
+    ...diagram.ball.carrierTimeline.map((entry) => (entry.target?.y ?? 0) + 3),
+  );
 }

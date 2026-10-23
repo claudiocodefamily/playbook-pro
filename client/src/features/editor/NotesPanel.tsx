@@ -47,7 +47,7 @@ function NotesField() {
       maxLength={MAX_NOTES}
       rows={4}
       placeholder="Lectura del QB, ajustes contra blitz, coaching points…"
-      hint="Se ven en el modo presentación."
+      hint="Se ven en el modo presentación y en los links compartidos."
       onChange={(event) => setDraft(event.target.value)}
       onBlur={() => apply((diagram) => setNotes(diagram, draft))}
     />
@@ -187,14 +187,25 @@ export function PresentationNotes({ teamId, playId }: { teamId: string; playId: 
     const concept = concepts.data?.find((candidate) => candidate.id === id);
     return concept ? [concept] : [];
   });
-  if (!notes.trim() && linked.length === 0) return null;
+  return <NotesAside notes={notes} concepts={linked} />;
+}
+
+/** Conceptos y notas junto a la cancha, en presentación y en los links compartidos. */
+export function NotesAside({
+  notes,
+  concepts,
+}: {
+  notes: string;
+  concepts: readonly { id: string; name: string; explanation: string }[];
+}) {
+  if (!notes.trim() && concepts.length === 0) return null;
   return (
     <aside className="flex flex-col gap-4 rounded-2xl bg-black/25 p-4 text-white lg:w-80 lg:shrink-0 lg:self-start">
-      {linked.length > 0 && (
+      {concepts.length > 0 && (
         <div className="flex flex-col gap-2">
           <h3 className="text-xs font-bold tracking-wide text-white/60 uppercase">Conceptos</h3>
           <ul className="flex flex-col gap-2">
-            {linked.map((concept) => (
+            {concepts.map((concept) => (
               <li key={concept.id}>
                 <p className="text-lg font-bold">{concept.name}</p>
                 <p className="text-sm leading-snug text-white/80">{concept.explanation}</p>

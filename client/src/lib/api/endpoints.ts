@@ -10,6 +10,8 @@ import type {
   PlayVersion,
   PlayVersionSummary,
   RosterPlayer,
+  SharedPlaybook,
+  ShareLink,
   Team,
   TeamMember,
   UploadSignature,
@@ -187,4 +189,27 @@ export const playsApi = {
     api.request<PlayVersionSummary[]>(`/teams/${teamId}/plays/${playId}/versions`),
   version: (teamId: string, playId: string, version: number) =>
     api.request<PlayVersion>(`/teams/${teamId}/plays/${playId}/versions/${version}`),
+};
+
+export const shareLinksApi = {
+  list: (teamId: string, playbookId: string) =>
+    api.request<ShareLink[]>(`/teams/${teamId}/playbooks/${playbookId}/share-links`),
+  create: (
+    teamId: string,
+    playbookId: string,
+    input: { label?: string; expiresInDays: number | null },
+  ) =>
+    api.request<ShareLink>(`/teams/${teamId}/playbooks/${playbookId}/share-links`, {
+      method: 'POST',
+      ...json(input),
+    }),
+  revoke: (teamId: string, playbookId: string, linkId: string) =>
+    api.request<void>(`/teams/${teamId}/playbooks/${playbookId}/share-links/${linkId}`, {
+      method: 'DELETE',
+    }),
+  /** Público: no necesita sesión. */
+  open: (token: string) =>
+    api.request<SharedPlaybook>(`/shared/${encodeURIComponent(token)}`, {
+      retryOnUnauthorized: false,
+    }),
 };

@@ -9,6 +9,7 @@ import {
   playsApi,
   type RosterInput,
   rosterApi,
+  shareLinksApi,
   teamsApi,
 } from './endpoints';
 
@@ -34,6 +35,16 @@ export const queries = {
     queryOptions({
       queryKey: ['teams', teamId, 'concepts'],
       queryFn: () => conceptsApi.list(teamId),
+    }),
+  shareLinks: (teamId: string, playbookId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'playbooks', playbookId, 'share-links'],
+      queryFn: () => shareLinksApi.list(teamId, playbookId),
+    }),
+  shared: (token: string) =>
+    queryOptions({
+      queryKey: ['shared', token],
+      queryFn: () => shareLinksApi.open(token),
     }),
   conceptPlays: (teamId: string, conceptId: string) =>
     queryOptions({
@@ -215,6 +226,29 @@ export function useDeleteConcept(teamId: string) {
   const changed = useConceptsChanged(teamId);
   return useMutation({
     mutationFn: (conceptId: string) => conceptsApi.remove(teamId, conceptId),
+    onSuccess: changed,
+  });
+}
+
+function useShareLinksChanged(teamId: string, playbookId: string) {
+  const client = useQueryClient();
+  return () =>
+    client.invalidateQueries({ queryKey: queries.shareLinks(teamId, playbookId).queryKey });
+}
+
+export function useCreateShareLink(teamId: string, playbookId: string) {
+  const changed = useShareLinksChanged(teamId, playbookId);
+  return useMutation({
+    mutationFn: (input: { label?: string; expiresInDays: number | null }) =>
+      shareLinksApi.create(teamId, playbookId, input),
+    onSuccess: changed,
+  });
+}
+
+export function useRevokeShareLink(teamId: string, playbookId: string) {
+  const changed = useShareLinksChanged(teamId, playbookId);
+  return useMutation({
+    mutationFn: (linkId: string) => shareLinksApi.revoke(teamId, playbookId, linkId),
     onSuccess: changed,
   });
 }
