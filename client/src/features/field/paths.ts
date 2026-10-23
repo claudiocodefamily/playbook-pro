@@ -13,6 +13,23 @@ export function isPathAssignment(assignment: Assignment): assignment is PathAssi
   return assignment.type !== 'man' && assignment.type !== 'zone';
 }
 
+export type BlockAssignment = Extract<Assignment, { type: 'block' }>;
+
+/**
+ * Un bloqueo asignado a un rival: el bloqueador no va a un punto fijo, sigue a ese jugador
+ * (lo calcula la animación). Su punto guardado no cuenta como destino del trazo.
+ */
+export function isTargetedBlock(
+  assignment: Assignment,
+): assignment is BlockAssignment & { targetPlayerId: string } {
+  return assignment.type === 'block' && assignment.targetPlayerId !== undefined;
+}
+
+/** Hasta dónde lleva el trazo al jugador: un bloqueo asignado no lo mueve por sí solo. */
+function pathEnd(path: PathAssignment, cursor: Point): Point {
+  return isTargetedBlock(path) ? cursor : (path.points.at(-1) ?? cursor);
+}
+
 /** Trazos de un jugador en orden de tiempo: primero el motion (antes del snap), luego el resto. */
 export function playerPaths(diagram: PathSource, playerId: string): PathAssignment[] {
   return diagram.assignments
@@ -31,7 +48,7 @@ export function pathOrigins(diagram: PathSource): Map<string, Point> {
     let cursor: Point = { x: player.x, y: player.y };
     for (const path of playerPaths(diagram, player.id)) {
       origins.set(path.id, cursor);
-      cursor = path.points.at(-1) ?? cursor;
+      cursor = pathEnd(path, cursor);
     }
   }
   return origins;
@@ -41,7 +58,9 @@ export function pathOrigins(diagram: PathSource): Map<string, Point> {
 export function chainEnd(diagram: PathSource, playerId: string): Point | undefined {
   const player = diagram.players.find((candidate) => candidate.id === playerId);
   if (!player) return undefined;
-  return playerPaths(diagram, playerId).at(-1)?.points.at(-1) ?? { x: player.x, y: player.y };
+  let cursor: Point = { x: player.x, y: player.y };
+  for (const path of playerPaths(diagram, playerId)) cursor = pathEnd(path, cursor);
+  return cursor;
 }
 
 export function pathLength(points: readonly Point[]): number {
@@ -81,9 +100,10 @@ export function positionsAt(diagram: PathSource, t: number): Map<string, Point> 
     let cursor: Point = { x: player.x, y: player.y };
     for (const path of playerPaths(diagram, player.id)) {
       if (t <= path.startTime) break;
+      if (isTargetedBlock(path)) continue;
       const route = [cursor, ...path.points];
       if (t >= path.endTime || path.endTime === path.startTime) {
-        cursor = path.points.at(-1) ?? cursor;
+        cursor = pathEnd(path, cursor);
         continue;
       }
       cursor = pointAlong(route, (t - path.startTime) / (path.endTime - path.startTime));

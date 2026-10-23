@@ -1,5 +1,5 @@
 import type { Assignment, PlayDiagram, Point } from '@playbook/shared';
-import { isPathAssignment, playbackRange, positionsAt } from './paths';
+import { isPathAssignment, isTargetedBlock, playbackRange, positionsAt } from './paths';
 
 export type ManAssignment = Extract<Assignment, { type: 'man' }>;
 export type ZoneAssignment = Extract<Assignment, { type: 'zone' }>;
@@ -19,14 +19,67 @@ const MAN_CUSHION = 2.2;
 const ZONE_SPEED = 6;
 /** Cuánto se desplaza hacia el receptor que entra en su zona (0 = nada, 1 = encima). */
 const ZONE_SHADE = 0.6;
+/** Distancia a la que el bloqueador se queda del jugador que bloquea (contacto), en yardas. */
+const BLOCK_CONTACT = 1.4;
+/** Velocidad con la que el bloqueador llega al contacto, en yardas por segundo. */
+const BLOCK_SPEED = 5;
+/** Retraso con el que el bloqueador reacciona a los movimientos del rival. */
+const BLOCK_LAG = 0.15;
 
 /**
- * Posición de todos los jugadores en el segundo `t`, con la defensa reaccionando: el
- * defensor en man sigue a su receptor (también en el motion antes del snap) y el de zona
- * cae a su zona tras el snap y se desplaza hacia el receptor que entra en ella. Un
- * jugador con trazos (por ejemplo, un blitz) sigue sus trazos.
+ * Posición de todos los jugadores en el segundo `t`, con los jugadores reaccionando unos a
+ * otros: el defensor en man sigue a su receptor, el de zona cae a su zona y se desplaza
+ * hacia el receptor que entra en ella, y el que tiene un bloqueo asignado sigue al rival
+ * que bloquea (también si ese rival hace un blitz, un slant o cubre a alguien).
  */
 export function animatedPositions(diagram: PlayDiagram, t: number): Map<string, Point> {
+  const positions = coveragePositions(diagram, t);
+  for (const block of diagram.assignments.filter(isTargetedBlock)) {
+    if (t <= block.startTime) continue;
+    const position = blockPosition(diagram, block.playerId, block.targetPlayerId, block, t);
+    if (position) positions.set(block.playerId, position);
+  }
+  return positions;
+}
+
+/**
+ * El bloqueador sale de donde está al empezar el bloqueo, llega al contacto con el rival por
+ * el lado por el que lo encara y, desde ahí, lo acompaña a donde vaya (lo espeja). Al
+ * terminar el bloqueo se queda donde estaba.
+ */
+function blockPosition(
+  diagram: PlayDiagram,
+  blockerId: string,
+  targetId: string,
+  timing: { startTime: number; endTime: number },
+  t: number,
+): Point | null {
+  const start = timing.startTime;
+  const now = Math.min(t, Math.max(start, timing.endTime));
+  const atStart = coveragePositions(diagram, start);
+  const blocker = atStart.get(blockerId);
+  const target = atStart.get(targetId);
+  if (!blocker || !target) return null;
+  const offset = { x: blocker.x - target.x, y: blocker.y - target.y };
+  const length = Math.hypot(offset.x, offset.y);
+  // Si empiezan encima, se coloca delante del rival mirando a su propio campo.
+  const contact =
+    length === 0
+      ? {
+          x: 0,
+          y: diagram.players.find((player) => player.id === blockerId)?.side === 'D' ? 1 : -1,
+        }
+      : { x: offset.x / length, y: offset.y / length };
+  const settleSeconds = Math.max(0.3, (length - BLOCK_CONTACT) / BLOCK_SPEED);
+  const settle = Math.min(1, (now - start) / settleSeconds);
+  const followed =
+    coveragePositions(diagram, Math.max(start, now - BLOCK_LAG)).get(targetId) ?? target;
+  const gap = length + (BLOCK_CONTACT - length) * settle;
+  return { x: followed.x + contact.x * gap, y: followed.y + contact.y * gap };
+}
+
+/** Posiciones con la cobertura de la defensa aplicada (sin los bloqueos asignados). */
+function coveragePositions(diagram: PlayDiagram, t: number): Map<string, Point> {
   const positions = positionsAt(diagram, t);
   const withPaths = new Set(
     diagram.assignments.filter(isPathAssignment).map((assignment) => assignment.playerId),

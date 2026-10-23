@@ -327,6 +327,55 @@ export function addPathAssignment(
   return { diagram: { ...diagram, assignments: [...withoutMotion, assignment] }, assignmentId: id };
 }
 
+/** Lo que dura por defecto un bloqueo asignado a un rival, en segundos. */
+const TARGETED_BLOCK_SECONDS = 3;
+
+/**
+ * Bloqueo asignado a un rival: el jugador lo sigue a donde vaya durante la animación.
+ * Sustituye a los bloqueos que ya tuviera y empieza cuando acaban sus otros trazos (en el
+ * snap si no tiene). Devuelve null si el rival no es del otro equipo.
+ */
+export function addTargetedBlock(
+  diagram: PlayDiagram,
+  blockerId: string,
+  targetId: string,
+): { diagram: PlayDiagram; assignmentId: string } | null {
+  const blocker = diagram.players.find((player) => player.id === blockerId);
+  const target = diagram.players.find((player) => player.id === targetId);
+  if (!blocker || !target || blocker.side === target.side) return null;
+  const others = playerPaths(diagram, blockerId).filter(
+    (path) => path.type !== 'block' && path.type !== 'motion',
+  );
+  const startTime = Math.min(
+    TIME_LIMIT - MIN_PATH_SECONDS,
+    Math.max(0, ...others.map((path) => path.endTime)),
+  );
+  const id = newId();
+  const block: Assignment = {
+    id,
+    playerId: blockerId,
+    type: 'block',
+    targetPlayerId: targetId,
+    // El esquema pide un punto: el rival al dibujarlo. La animación usa su posición real.
+    points: [{ x: target.x, y: target.y }],
+    style: { ...DEFAULT_STYLE.block },
+    startTime,
+    endTime: Math.min(TIME_LIMIT, round(startTime + TARGETED_BLOCK_SECONDS)),
+  };
+  return {
+    diagram: {
+      ...diagram,
+      assignments: [
+        ...diagram.assignments.filter(
+          (assignment) => !(assignment.playerId === blockerId && assignment.type === 'block'),
+        ),
+        block,
+      ],
+    },
+    assignmentId: id,
+  };
+}
+
 export type AssignmentChanges = Partial<Pick<PathAssignment, 'style'>> & {
   /** Solo para rutas. Cadena vacía quita el nombre. */
   routeName?: string;

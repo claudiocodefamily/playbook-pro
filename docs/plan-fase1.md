@@ -905,9 +905,16 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - Las fotos se suben directamente del navegador a Cloudinary con una firma que da la API (`POST /api/teams/:teamId/uploads/roster-photo`). Para activarlo hacen falta las variables `CLOUDINARY_*`; sin ellas, se pega la URL de la foto.
 - En el editor, cada jugador de la cancha se puede enlazar a un jugador del roster (`rosterPlayerId`), que pone su dorsal.
 
+**Bloqueo que reacciona** (hecho): con la herramienta Bloqueo, si sueltas el trazo sobre un rival, el bloqueo queda asignado a él (`targetPlayerId`, ya existía en el esquema).
+
+- Vale para cualquier jugador (OL, TE, RB, WR) y en cualquier lado (también los bloqueadores del retorno en special teams).
+- En la animación, el bloqueador llega al contacto por el lado por el que encara al rival y lo acompaña a donde vaya (slant, stunt, blitz, cobertura). Al terminar el bloqueo se queda quieto.
+- Empieza cuando acaban sus otros trazos (en el snap si no tiene) y dura 3 s; se ajusta en la línea de tiempo. Sustituye al bloqueo que ya tuviera.
+- Sin cambio de esquema: el punto guardado es la posición del rival al dibujarlo y no mueve al jugador.
+
 **Sigue**
 
-- Bloqueo que reacciona: el bloqueador sigue al defensor que tiene asignado.
+- Lápiz: rayar libre sobre la cancha (colores y goma), guardado con la jugada y sin efecto en la animación. Necesita diagram v3.
 - Fase 3: notas y glosario, modo jugador, links de solo lectura y cuentas de jugadores.
 - Fase 4: exportar a PNG/PDF, quizzes y game plan.
 

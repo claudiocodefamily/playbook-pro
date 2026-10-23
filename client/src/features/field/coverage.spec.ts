@@ -75,3 +75,62 @@ describe('animatedPositions', () => {
     expect(late?.x).toBeLessThan(-12);
   });
 });
+
+describe('bloqueo asignado a un rival', () => {
+  const C = newId();
+  const NT = newId();
+  const solid = { line: 'solid', end: 'block', curved: false } as const;
+
+  /** El nose tackle hace un slant hacia su derecha; el center lo tiene asignado. */
+  function slant(): PlayDiagram {
+    return {
+      ...createEmptyDiagram(),
+      players: [
+        { id: C, side: 'O', position: 'OL', label: 'C', x: 0, y: -1 },
+        { id: NT, side: 'D', position: 'DL', label: 'NT', x: 0, y: 1 },
+      ],
+      assignments: [
+        {
+          id: newId(),
+          playerId: NT,
+          type: 'blitz',
+          points: [{ x: -4, y: -2 }],
+          style: { ...solid, end: 'arrow' },
+          startTime: 0,
+          endTime: 1.5,
+        },
+        {
+          id: newId(),
+          playerId: C,
+          type: 'block',
+          targetPlayerId: NT,
+          points: [{ x: 0, y: 1 }],
+          style: solid,
+          startTime: 0,
+          endTime: 3,
+        },
+      ],
+    };
+  }
+
+  it('antes del snap el bloqueador no se mueve', () => {
+    expect(animatedPositions(slant(), 0).get(C)).toEqual({ x: 0, y: -1 });
+  });
+
+  it('sigue al rival a donde va y se queda delante de él', () => {
+    const positions = animatedPositions(slant(), 1.5);
+    const center = positions.get(C);
+    const nose = positions.get(NT);
+    expect(center && nose).toBeTruthy();
+    if (!center || !nose) return;
+    // El center se desplazó hacia el lado del slant, entre el NT y su backfield.
+    expect(center.x).toBeLessThan(-2);
+    expect(center.y).toBeLessThan(nose.y);
+    expect(Math.hypot(center.x - nose.x, center.y - nose.y)).toBeLessThan(2.5);
+  });
+
+  it('al terminar el bloqueo se queda donde estaba', () => {
+    const at3 = animatedPositions(slant(), 3).get(C);
+    expect(animatedPositions(slant(), 5).get(C)).toEqual(at3);
+  });
+});

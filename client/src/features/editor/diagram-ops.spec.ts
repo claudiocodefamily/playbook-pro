@@ -6,12 +6,13 @@ import {
   type PlayDiagram,
 } from '@playbook/shared';
 import { describe, expect, it } from 'vitest';
-import { pathOrigins } from '../field/paths';
+import { chainEnd, pathOrigins, positionsAt } from '../field/paths';
 import {
   addBallTransfer,
   addFieldGoal,
   addKickoff,
   addManCoverage,
+  addTargetedBlock,
   addZoneCoverage,
   addPathAssignment,
   addPlayer,
@@ -518,5 +519,59 @@ describe('special teams', () => {
     expect(tooFar.field.yardLine).toBe(20);
     expect(tooFar.ball.carrierTimeline).toHaveLength(1);
     expect(setYardLine(kicked, 150).field.yardLine).toBe(99);
+  });
+});
+
+describe('addTargetedBlock', () => {
+  function withNose() {
+    const added = addPlayer(slant(), {
+      side: 'D',
+      position: 'DL',
+      label: 'NT',
+      at: { x: 0, y: 1 },
+    });
+    if (!added) throw new Error('debería caber');
+    const c = added.diagram.players.find((player) => player.label === 'C');
+    const qb = added.diagram.players.find((player) => player.label === 'QB');
+    if (!c || !qb) throw new Error('faltan jugadores');
+    return { diagram: added.diagram, nt: added.playerId, c: c.id, qb: qb.id };
+  }
+
+  it('asigna el bloqueo a un rival y sustituye al bloqueo que tuviera', () => {
+    const { diagram, nt, c } = withNose();
+    const drawn = addPathAssignment(diagram, {
+      playerId: c,
+      type: 'block',
+      points: [{ x: 2, y: 1 }],
+    });
+    if (!drawn) throw new Error('debería dibujarse');
+    const added = addTargetedBlock(drawn.diagram, c, nt);
+    const blocks = added?.diagram.assignments.filter((a) => a.type === 'block');
+    expect(blocks).toHaveLength(1);
+    expect(blocks?.[0]).toMatchObject({
+      playerId: c,
+      targetPlayerId: nt,
+      startTime: 0,
+      endTime: 3,
+    });
+    expect(PlayDiagramSchema.safeParse(added?.diagram).success).toBe(true);
+  });
+
+  it('cualquier jugador puede bloquear, pero solo a uno del otro equipo', () => {
+    const { diagram, nt, c, qb } = withNose();
+    expect(addTargetedBlock(diagram, c, qb)).toBeNull();
+    expect(addTargetedBlock(diagram, qb, nt)).not.toBeNull();
+  });
+
+  it('empieza cuando acaba su ruta y no mueve al jugador por sí solo', () => {
+    const { diagram, nt } = withNose();
+    const x = diagram.players.find((player) => player.label === 'X');
+    if (!x) throw new Error('falta el X');
+    const added = addTargetedBlock(diagram, x.id, nt);
+    if (!added) throw new Error('debería añadirse');
+    expect(added.diagram.assignments.at(-1)).toMatchObject({ startTime: 1.5, endTime: 4.5 });
+    // Sin animación de reacción, el X se queda al final de su slant.
+    expect(chainEnd(added.diagram, x.id)).toEqual({ x: -14, y: 6 });
+    expect(positionsAt(added.diagram, 4).get(x.id)).toEqual({ x: -14, y: 6 });
   });
 });
