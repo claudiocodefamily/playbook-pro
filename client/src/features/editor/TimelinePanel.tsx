@@ -175,8 +175,16 @@ export function TimelinePanel({ playback }: { playback: Playback }) {
               {paths.map((path) => {
                 const left = percent(path.startTime);
                 const width = Math.max(percent(path.endTime) - left, 1.5);
+                const rival =
+                  path.type === 'block' && path.targetPlayerId
+                    ? diagram.players.find((candidate) => candidate.id === path.targetPlayerId)
+                    : undefined;
                 const name =
-                  path.type === 'route' && path.routeName ? path.routeName : TYPE_LABELS[path.type];
+                  path.type === 'route' && path.routeName
+                    ? path.routeName
+                    : rival
+                      ? `Bloqueo a ${rival.label}`
+                      : TYPE_LABELS[path.type];
                 return (
                   <button
                     key={path.id}

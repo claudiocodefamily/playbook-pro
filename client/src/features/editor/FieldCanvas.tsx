@@ -20,10 +20,17 @@ import {
 import { ballAt, ballFlights, snapSpot } from '../field/ball';
 import { animatedPositions, type CoverageAssignment, isCoverage } from '../field/coverage';
 import { sampleTrails, trailsAt } from '../field/trails';
-import { chainEnd, isPathAssignment, pathOrigins, type PathAssignment } from '../field/paths';
+import {
+  chainEnd,
+  isPathAssignment,
+  isTargetedBlock,
+  pathOrigins,
+  type PathAssignment,
+} from '../field/paths';
 import {
   addManCoverage,
   addPathAssignment,
+  addTargetedBlock,
   addZoneCoverage,
   MIN_PATH_YARDS,
   movePlayer,
@@ -52,6 +59,17 @@ const COLORS = {
 };
 /** Al soltar un marcaje, se engancha al jugador de ataque más cercano dentro de esta distancia. */
 const MAN_SNAP_YARDS = 3;
+
+/** La T de un bloqueo asignado queda delante del rival, no encima de él. */
+function blockContact(from: Point, target: Point): Point {
+  const dx = from.x - target.x;
+  const dy = from.y - target.y;
+  const length = Math.hypot(dx, dy);
+  const gap = Math.min(PLAYER_RADIUS * 1.4, length / 2);
+  return length === 0
+    ? target
+    : { x: target.x + (dx / length) * gap, y: target.y + (dy / length) * gap };
+}
 /** Distancia mínima entre puntos al dibujar con el dedo, para no guardar cientos. */
 const DRAW_SAMPLE_PX = 4;
 
@@ -179,8 +197,24 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
         y: active.origin.y + point.y - start.y,
       }),
     );
+    const end = points.at(-1);
     apply((current) => {
-      const added = addPathAssignment(current, { playerId: active.playerId, type: tool, points });
+      // Un bloqueo que se suelta sobre un rival queda asignado a él: lo sigue en la animación.
+      const blocker = current.players.find((player) => player.id === active.playerId);
+      const rival =
+        tool === 'block' && blocker && end
+          ? current.players
+              .filter((player) => player.side !== blocker.side)
+              .map((player) => ({
+                player,
+                distance: Math.hypot(player.x - end.x, player.y - end.y),
+              }))
+              .filter(({ distance }) => distance <= MAN_SNAP_YARDS)
+              .sort((a, b) => a.distance - b.distance)[0]
+          : undefined;
+      const added = rival
+        ? addTargetedBlock(current, active.playerId, rival.player.id)
+        : addPathAssignment(current, { playerId: active.playerId, type: tool, points });
       if (!added) return current;
       addedId = added.assignmentId;
       return added.diagram;
@@ -292,11 +326,20 @@ export function FieldCanvas({ ruleset, window, playbackTime, showTrails }: Field
             {diagram.assignments.filter(isPathAssignment).map((assignment) => {
               const origin = origins.get(assignment.id);
               if (!origin) return null;
+              const target = isTargetedBlock(assignment)
+                ? diagram.players.find((player) => player.id === assignment.targetPlayerId)
+                : undefined;
+              // En la animación, la T acompaña al bloqueador y al rival.
+              const from = (target ? positions?.get(assignment.playerId) : undefined) ?? origin;
               return (
                 <AssignmentShape
                   key={assignment.id}
                   assignment={assignment}
-                  points={[origin, ...assignment.points].map(px)}
+                  points={
+                    target
+                      ? [px(from), px(blockContact(from, positionOf(target)))]
+                      : [origin, ...assignment.points].map(px)
+                  }
                   scale={scale}
                   selected={assignment.id === selectedAssignmentId}
                   dimmed={playbackTime !== null}

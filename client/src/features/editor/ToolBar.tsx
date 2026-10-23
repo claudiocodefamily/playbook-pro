@@ -30,7 +30,7 @@ const TOOLS: readonly {
     id: 'block',
     label: 'Bloqueo',
     icon: BrickWall,
-    hint: 'Arrastra desde un jugador hasta donde bloquea.',
+    hint: 'Arrastra desde un jugador hasta donde bloquea. Si lo sueltas sobre un rival, lo sigue a donde vaya.',
   },
   {
     id: 'motion',

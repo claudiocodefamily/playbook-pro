@@ -54,6 +54,11 @@ export function AssignmentPanel() {
   const player = useEditor((state) =>
     state.diagram.players.find((candidate) => candidate.id === assignment?.playerId),
   );
+  const rival = useEditor((state) =>
+    assignment?.type === 'block'
+      ? state.diagram.players.find((candidate) => candidate.id === assignment.targetPlayerId)
+      : undefined,
+  );
   const apply = useEditor((state) => state.apply);
   if (!assignment) return null;
   if (!isPathAssignment(assignment)) return <CoveragePanel coverage={assignment} />;
@@ -74,6 +79,14 @@ export function AssignmentPanel() {
         {TYPE_LABELS[assignment.type]}
         {player && <span className="font-normal text-slate-500"> de {player.label}</span>}
       </h2>
+
+      {assignment.type === 'block' && assignment.targetPlayerId && (
+        <p className="text-sm text-slate-600">
+          Bloquea a <strong>{rival?.label ?? '?'}</strong>: en la animación lo sigue a donde vaya
+          (slant, stunt, blitz…). Para cambiar a quién bloquea, vuelve a dibujar el bloqueo y
+          suéltalo sobre otro rival.
+        </p>
+      )}
 
       {assignment.type === 'route' && (
         <div className="flex flex-col gap-2">
