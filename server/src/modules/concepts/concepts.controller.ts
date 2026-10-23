@@ -21,6 +21,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { AllowPlayers } from '../../common/decorators/allow-players.decorator.js';
 import { TeamAccessGuard } from '../../common/guards/team-access.guard.js';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe.js';
 import { PlaySummaryResponseDto } from '../plays/dto/play-response.dto.js';
@@ -34,7 +35,7 @@ import { UpdateConceptDto } from './dto/update-concept.dto.js';
 @ApiBearerAuth()
 @UseGuards(TeamAccessGuard)
 @ApiNotFoundResponse({
-  description: 'El equipo o el concepto no existen, o no eres coach del equipo',
+  description: 'El equipo o el concepto no existen, o no eres del equipo',
 })
 @Controller('teams/:teamId/concepts')
 export class ConceptsController {
@@ -52,6 +53,7 @@ export class ConceptsController {
   }
 
   @Get()
+  @AllowPlayers()
   @ApiOperation({
     summary: 'Glosario: conceptos del equipo y globales, con cuántas jugadas usan cada uno',
   })
@@ -68,6 +70,7 @@ export class ConceptsController {
   }
 
   @Get(':conceptId')
+  @AllowPlayers()
   @ApiOperation({ summary: 'Devuelve un concepto del equipo o uno global' })
   @ApiOkResponse({ type: ConceptResponseDto })
   async findOne(

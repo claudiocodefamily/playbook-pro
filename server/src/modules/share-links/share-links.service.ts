@@ -1,8 +1,12 @@
-import { createHash, randomBytes } from 'node:crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { migrateDiagram } from '@playbook/shared';
 import type { Model } from 'mongoose';
+import {
+  hashSecretToken,
+  isSecretTokenShape,
+  newSecretToken,
+} from '../../common/utils/secret-token.js';
 import { ConceptsService } from '../concepts/concepts.service.js';
 import { PlaybooksService } from '../playbooks/playbooks.service.js';
 import { Play } from '../plays/schemas/play.schema.js';
@@ -12,14 +16,8 @@ import type { SharedPlaybookResponseDto } from './dto/shared-playbook-response.d
 import { ShareLink, type ShareLinkDocument } from './schemas/share-link.schema.js';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
-/** 32 bytes en base64url: 43 caracteres. */
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 // El mismo mensaje para un link que no existe, caducó o se revocó: no da pistas.
 const LINK_NOT_FOUND = 'Este link no existe, caducó o el coach lo desactivó';
-
-export function hashShareToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
 
 @Injectable()
 export class ShareLinksService {
@@ -39,11 +37,11 @@ export class ShareLinksService {
     dto: CreateShareLinkDto,
   ): Promise<{ link: ShareLinkDocument; token: string }> {
     await this.playbooks.findOne(teamId, playbookId);
-    const token = randomBytes(32).toString('base64url');
+    const token = newSecretToken();
     const link = await this.linkModel.create({
       teamId,
       playbookId,
-      tokenHash: hashShareToken(token),
+      tokenHash: hashSecretToken(token),
       label: dto.label ?? '',
       expiresAt: dto.expiresInDays ? new Date(Date.now() + dto.expiresInDays * DAY_IN_MS) : null,
       createdBy: userId,
@@ -78,8 +76,8 @@ export class ShareLinksService {
 
   /** Lo que ve quien abre el link: el playbook con sus jugadas, sin poder cambiar nada. */
   async open(token: string): Promise<SharedPlaybookResponseDto> {
-    if (!TOKEN_PATTERN.test(token)) throw new NotFoundException(LINK_NOT_FOUND);
-    const link = await this.linkModel.findOne({ tokenHash: hashShareToken(token) }).exec();
+    if (!isSecretTokenShape(token)) throw new NotFoundException(LINK_NOT_FOUND);
+    const link = await this.linkModel.findOne({ tokenHash: hashSecretToken(token) }).exec();
     if (!link || link.revokedAt || (link.expiresAt && link.expiresAt <= new Date())) {
       throw new NotFoundException(LINK_NOT_FOUND);
     }

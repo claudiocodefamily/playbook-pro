@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import type { TeamMembership } from '../../common/decorators/team-member.decorator.js';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { toMongoUpdate, withoutNullish } from '../../common/utils/mongo-update.js';
@@ -29,9 +30,17 @@ export class TeamsService {
     return this.teamModel.find({ 'members.userId': userId }).sort({ name: 1 }).exec();
   }
 
-  /** Lo usa `TeamAccessGuard`: es la comprobación de aislamiento entre equipos. */
-  async isMember(teamId: string, userId: string): Promise<boolean> {
-    return (await this.teamModel.exists({ _id: teamId, 'members.userId': userId })) !== null;
+  /**
+   * Lo usa `TeamAccessGuard`: es la comprobación de aislamiento entre equipos. Devuelve el
+   * rol del usuario en el equipo, o null si no es miembro.
+   */
+  async membership(teamId: string, userId: string): Promise<TeamMembership | null> {
+    const team = await this.teamModel
+      .findOne({ _id: teamId, 'members.userId': userId }, { 'members.$': 1 })
+      .lean()
+      .exec();
+    const member = team?.members[0];
+    return member ? { role: member.role, rosterPlayerId: member.rosterPlayerId ?? null } : null;
   }
 
   async findOne(teamId: string): Promise<TeamDocument> {
@@ -60,7 +69,9 @@ export class TeamsService {
     const users = await this.users.findByIds(team.members.map((member) => member.userId));
     const usersById = new Map(users.map((user) => [user._id, user]));
 
+    // Los jugadores con cuenta se gestionan desde el roster, no en la lista de coaches.
     return team.members.flatMap((member) => {
+      if (member.role !== 'COACH') return [];
       const user = usersById.get(member.userId);
       return user ? [TeamMemberResponseDto.from(member, user)] : [];
     });
@@ -81,19 +92,28 @@ export class TeamsService {
       )
       .exec();
     if (result.modifiedCount === 0) {
-      await this.findOne(teamId);
-      throw new ConflictException('Ese usuario ya es coach del equipo');
+      const team = await this.findOne(teamId);
+      const existing = team.members.find((member) => member.userId === user._id);
+      throw new ConflictException(
+        existing?.role === 'PLAYER'
+          ? 'Ese usuario ya está en el equipo como jugador'
+          : 'Ese usuario ya es coach del equipo',
+      );
     }
     return this.listMembers(teamId);
   }
 
   /** Quita a un coach. Un equipo nunca puede quedarse sin coaches. */
   async removeMember(teamId: string, userId: string): Promise<void> {
-    // "members.1" existe solo si hay al menos dos miembros: así nunca se quita al último,
-    // ni siquiera si dos coaches se quitan a la vez.
+    // Solo si queda otro coach: la comprobación y el borrado van en una sola operación, así
+    // nunca se quita al último, ni siquiera si dos coaches se quitan a la vez.
     const result = await this.teamModel
       .updateOne(
-        { _id: teamId, 'members.userId': userId, 'members.1': { $exists: true } },
+        {
+          _id: teamId,
+          members: { $elemMatch: { userId, role: 'COACH' } },
+          $and: [{ members: { $elemMatch: { userId: { $ne: userId }, role: 'COACH' } } }],
+        },
         { $pull: { members: { userId } } },
       )
       .exec();
@@ -102,9 +122,61 @@ export class TeamsService {
     }
 
     const team = await this.findOne(teamId);
-    if (!team.members.some((member) => member.userId === userId)) {
+    if (!team.members.some((member) => member.userId === userId && member.role === 'COACH')) {
       throw new NotFoundException('Ese usuario no es coach del equipo');
     }
     throw new ConflictException('No se puede quitar al último coach del equipo');
+  }
+
+  /**
+   * Da de alta a un jugador con cuenta, unido a su ficha del roster. Falla si el usuario ya
+   * es del equipo o si esa ficha ya tiene cuenta.
+   */
+  async addPlayer(teamId: string, userId: string, rosterPlayerId: string): Promise<boolean> {
+    const result = await this.teamModel
+      .updateOne(
+        {
+          _id: teamId,
+          'members.userId': { $ne: userId },
+          'members.rosterPlayerId': { $ne: rosterPlayerId },
+        },
+        { $push: { members: { userId, role: 'PLAYER', rosterPlayerId, joinedAt: new Date() } } },
+      )
+      .exec();
+    return result.modifiedCount > 0;
+  }
+
+  /** Quita el acceso del jugador unido a esa ficha del roster. Devuelve false si no había. */
+  async removePlayer(teamId: string, rosterPlayerId: string): Promise<boolean> {
+    // La condición va en el filtro: con timestamps, updatedAt cambia siempre y modifiedCount
+    // no dice si se quitó a alguien.
+    const result = await this.teamModel
+      .updateOne(
+        { _id: teamId, members: { $elemMatch: { role: 'PLAYER', rosterPlayerId } } },
+        { $pull: { members: { role: 'PLAYER', rosterPlayerId } } },
+      )
+      .exec();
+    return result.modifiedCount > 0;
+  }
+
+  /** Jugadores con cuenta del equipo, con los datos de su cuenta. */
+  async listPlayers(
+    teamId: string,
+  ): Promise<{ rosterPlayerId: string; member: TeamMemberResponseDto }[]> {
+    const team = await this.findOne(teamId);
+    const players = team.members.filter((member) => member.role === 'PLAYER');
+    const users = await this.users.findByIds(players.map((member) => member.userId));
+    const usersById = new Map(users.map((user) => [user._id, user]));
+    return players.flatMap((member) => {
+      const user = usersById.get(member.userId);
+      return user && member.rosterPlayerId
+        ? [
+            {
+              rosterPlayerId: member.rosterPlayerId,
+              member: TeamMemberResponseDto.from(member, user),
+            },
+          ]
+        : [];
+    });
   }
 }

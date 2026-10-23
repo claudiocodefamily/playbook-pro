@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, Users } from 'lucide-react';
+import { Plus, Search, UserCheck, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
@@ -35,6 +35,10 @@ export function RosterPage() {
   const { teamId = '' } = useParams();
   const team = useQuery(queries.team(teamId));
   const roster = useQuery(queries.roster(teamId));
+  const access = useQuery(queries.playerAccess(teamId));
+  const withAccount = new Set(
+    (access.data ?? []).filter((entry) => entry.account).map((entry) => entry.rosterPlayerId),
+  );
   const [filter, setFilter] = useState<Filter>('active');
   const [search, setSearch] = useState('');
   // null: cerrado; 'new': jugador nuevo; o el jugador que se edita.
@@ -164,6 +168,15 @@ export function RosterPage() {
                       ))}
                       {!player.active && (
                         <span className="text-xs font-medium text-slate-500">Inactivo</span>
+                      )}
+                      {withAccount.has(player.id) && (
+                        <span
+                          className="inline-flex items-center gap-1 text-xs font-medium text-turf-700 dark:text-turf-300"
+                          title="Entra con su propia cuenta"
+                        >
+                          <UserCheck aria-hidden className="size-3.5" />
+                          Con cuenta
+                        </span>
                       )}
                     </span>
                   </span>

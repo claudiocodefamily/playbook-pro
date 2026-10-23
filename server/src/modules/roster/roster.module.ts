@@ -12,5 +12,6 @@ import { RosterPlayer, RosterPlayerSchema } from './schemas/roster-player.schema
   ],
   controllers: [RosterController],
   providers: [RosterService],
+  exports: [RosterService],
 })
 export class RosterModule {}

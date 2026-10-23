@@ -1,23 +1,29 @@
 import { BookMarked, BookOpen, ShieldCheck, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { NavLink } from 'react-router';
+import { useTeamRole } from '../hooks/useTeamRole';
 import { cn } from '../lib/cn';
 
 const TABS = [
-  { to: '', label: 'Playbooks', icon: BookOpen },
-  { to: 'roster', label: 'Roster', icon: Users },
-  { to: 'glossary', label: 'Glosario', icon: BookMarked },
-  { to: 'coaches', label: 'Coaches', icon: ShieldCheck },
+  { to: '', label: 'Playbooks', icon: BookOpen, players: true },
+  { to: 'roster', label: 'Roster', icon: Users, players: false },
+  { to: 'glossary', label: 'Glosario', icon: BookMarked, players: true },
+  { to: 'coaches', label: 'Coaches', icon: ShieldCheck, players: false },
 ] as const;
 
-/** Pestañas del equipo: sus playbooks, su roster, su glosario y sus coaches. */
+/**
+ * Pestañas del equipo: sus playbooks, su roster, su glosario y sus coaches. Un jugador
+ * solo ve los playbooks y el glosario.
+ */
 export function TeamNav({ teamId }: { teamId: string }) {
+  const { isPlayer } = useTeamRole(teamId);
+  const tabs = TABS.filter((tab) => tab.players || !isPlayer);
   return (
     <nav
       aria-label="Secciones del equipo"
       className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-200"
     >
-      {TABS.map(({ to, label, icon: Icon }) => (
+      {tabs.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={label}
           to={`/teams/${teamId}${to ? `/${to}` : ''}`}

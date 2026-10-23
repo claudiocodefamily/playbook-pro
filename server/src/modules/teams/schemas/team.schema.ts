@@ -8,9 +8,12 @@ export class TeamMember {
   @Prop({ type: String, ref: 'User', required: true })
   userId!: string;
 
-  // Único rol en la Fase 1; PLAYER llegará en la Fase 3.
   @Prop({ type: String, enum: [...TEAM_ROLES], default: 'COACH' })
   role!: TeamRole;
+
+  // Solo jugadores: su ficha del roster (número, posiciones).
+  @Prop({ type: String, ref: 'RosterPlayer', default: null })
+  rosterPlayerId!: string | null;
 
   @Prop({ type: Date, default: () => new Date() })
   joinedAt!: Date;
@@ -43,5 +46,5 @@ export class Team {
 export type TeamDocument = HydratedDocument<Team>;
 
 export const TeamSchema = SchemaFactory.createForClass(Team);
-// "¿De qué equipos soy coach?"
+// "¿De qué equipos soy miembro?"
 TeamSchema.index({ 'members.userId': 1 });

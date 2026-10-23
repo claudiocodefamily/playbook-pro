@@ -70,6 +70,11 @@ export function TeamsPage() {
                   <span className="text-sm text-slate-500">
                     {RULESET_LABELS[team.ruleset]} · {team.memberCount}{' '}
                     {team.memberCount === 1 ? 'coach' : 'coaches'}
+                    {team.myRole === 'PLAYER' && (
+                      <span className="ml-2 rounded-full bg-turf-100 px-2 py-0.5 text-xs font-semibold text-turf-800 dark:bg-turf-900/60 dark:text-turf-100">
+                        Jugador
+                      </span>
+                    )}
                   </span>
                 </span>
                 <ChevronRight

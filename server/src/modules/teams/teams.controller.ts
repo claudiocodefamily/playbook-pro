@@ -14,12 +14,14 @@ import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { AllowPlayers } from '../../common/decorators/allow-players.decorator.js';
 import { type AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { TeamAccessGuard } from '../../common/guards/team-access.guard.js';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe.js';
@@ -31,6 +33,7 @@ import { TeamsService } from './teams.service.js';
 
 @ApiTags('teams')
 @ApiBearerAuth()
+@ApiForbiddenResponse({ description: 'Solo los coaches del equipo pueden hacer esto' })
 @Controller('teams')
 export class TeamsController {
   constructor(private readonly teams: TeamsService) {}
@@ -42,24 +45,28 @@ export class TeamsController {
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateTeamDto,
   ): Promise<TeamResponseDto> {
-    return TeamResponseDto.from(await this.teams.create(user.id, dto));
+    return TeamResponseDto.from(await this.teams.create(user.id, dto), user.id);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista los equipos de los que soy coach' })
+  @ApiOperation({ summary: 'Lista mis equipos, como coach o como jugador' })
   @ApiOkResponse({ type: [TeamResponseDto] })
   async findAll(@CurrentUser() user: AuthUser): Promise<TeamResponseDto[]> {
     const teams = await this.teams.findAllForUser(user.id);
-    return teams.map((team) => TeamResponseDto.from(team));
+    return teams.map((team) => TeamResponseDto.from(team, user.id));
   }
 
   @Get(':teamId')
   @UseGuards(TeamAccessGuard)
+  @AllowPlayers()
   @ApiOperation({ summary: 'Devuelve un equipo' })
   @ApiOkResponse({ type: TeamResponseDto })
-  @ApiNotFoundResponse({ description: 'El equipo no existe o no eres su coach' })
-  async findOne(@Param('teamId', ParseUuidPipe) teamId: string): Promise<TeamResponseDto> {
-    return TeamResponseDto.from(await this.teams.findOne(teamId));
+  @ApiNotFoundResponse({ description: 'El equipo no existe o no eres de él' })
+  async findOne(
+    @CurrentUser() user: AuthUser,
+    @Param('teamId', ParseUuidPipe) teamId: string,
+  ): Promise<TeamResponseDto> {
+    return TeamResponseDto.from(await this.teams.findOne(teamId), user.id);
   }
 
   @Patch(':teamId')
@@ -68,10 +75,11 @@ export class TeamsController {
   @ApiOkResponse({ type: TeamResponseDto })
   @ApiNotFoundResponse({ description: 'El equipo no existe o no eres su coach' })
   async update(
+    @CurrentUser() user: AuthUser,
     @Param('teamId', ParseUuidPipe) teamId: string,
     @Body() dto: UpdateTeamDto,
   ): Promise<TeamResponseDto> {
-    return TeamResponseDto.from(await this.teams.update(teamId, dto));
+    return TeamResponseDto.from(await this.teams.update(teamId, dto), user.id);
   }
 
   @Get(':teamId/members')

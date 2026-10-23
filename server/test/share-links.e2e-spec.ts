@@ -3,7 +3,7 @@ import { newId } from '@playbook/shared';
 import type { Model } from 'mongoose';
 import request from 'supertest';
 import { ShareLink } from '../src/modules/share-links/schemas/share-link.schema.js';
-import { hashShareToken } from '../src/modules/share-links/share-links.service.js';
+import { hashSecretToken } from '../src/common/utils/secret-token.js';
 import { createTestApp, registerCoach, type TestApp, type TestCoach } from './create-test-app.js';
 
 interface LinkBody {
@@ -76,7 +76,7 @@ describe('Share links (e2e)', () => {
     // En la base de datos solo está el hash.
     const model = testApp.app.get<Model<ShareLink>>(getModelToken(ShareLink.name));
     const stored = await model.findById(link.id).lean().exec();
-    expect(stored?.tokenHash).toBe(hashShareToken(link.token ?? ''));
+    expect(stored?.tokenHash).toBe(hashSecretToken(link.token ?? ''));
     expect(JSON.stringify(stored)).not.toContain(link.token);
   });
 

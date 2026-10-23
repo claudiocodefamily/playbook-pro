@@ -27,7 +27,7 @@ El plan vigente de la Fase 1 está en `docs/plan-fase1.md`.
 - Un módulo NestJS = una responsabilidad: `module`, `controller`, `service`, `schemas/`, `dto/` y tests en `server/src/modules/<nombre>/`.
 - Cada endpoint tiene DTO validado (class-validator) y está documentado en Swagger.
 - **Aislamiento por equipo:** rutas anidadas `/api/teams/:teamId/...`, protegidas por `JwtAuthGuard` → `TeamAccessGuard`. Todos los services reciben `teamId` y filtran por él. `teamId` va primero en los índices compuestos.
-- **Roles:** en la Fase 1 solo existe `COACH`. Un equipo puede tener varios coaches, todos con los mismos permisos.
+- **Roles:** `COACH` y `PLAYER`. Un equipo puede tener varios coaches, todos con los mismos permisos. Los jugadores entran con una invitación del coach y solo leen: `TeamAccessGuard` les da 403 salvo en las rutas marcadas con `@AllowPlayers()`, y esas rutas filtran por `visibleToPlayers` con `@Membership()`. Una ruta nueva nace cerrada a jugadores.
 - **Ids:** todos son UUIDv7 guardados como string (`_id`, referencias e ids internos del diagram). Se generan con `newId()` de `@playbook/shared` y se validan con `UuidSchema`. Nunca uses un UUID como secreto: los tokens se generan con `crypto.randomBytes` y se guardan como hash.
 - Nunca guardes credenciales en el código. Las variables de entorno se validan con Zod en `server/src/config/env.schema.ts`.
 - En Mongo nunca se guardan imágenes ni binarios (las fotos van a Cloudinary; solo se guarda la URL).

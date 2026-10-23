@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Copy, Plus, Search, Share2, Trash2, Zap } from 'lucide-react';
+import { Copy, Eye, EyeOff, Plus, Search, Share2, Trash2, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -12,7 +12,14 @@ import { TextField } from '../../components/ui/field';
 import { Modal } from '../../components/ui/modal';
 import { PageSpinner } from '../../components/ui/spinner';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { queries, useCreatePlay, useDeletePlay, useDuplicatePlay } from '../../lib/api/queries';
+import { useTeamRole } from '../../hooks/useTeamRole';
+import {
+  queries,
+  useCreatePlay,
+  useDeletePlay,
+  useDuplicatePlay,
+  useUpdatePlaybook,
+} from '../../lib/api/queries';
 import type { Playbook, PlaySummary } from '../../lib/api/types';
 import { cn } from '../../lib/cn';
 import { errorText } from '../../lib/errors';
@@ -35,6 +42,9 @@ export function PlaybookPage() {
   const [deleting, setDeleting] = useState<PlaySummary | null>(null);
   const duplicatePlay = useDuplicatePlay(teamId);
   const deletePlay = useDeletePlay(teamId);
+  const updatePlaybook = useUpdatePlaybook(teamId);
+  const { isCoach } = useTeamRole(teamId);
+  const shownToPlayers = playbook.data?.visibleToPlayers ?? false;
   const filtered = Boolean(q || tag);
 
   // Las etiquetas de las jugadas visibles, para filtrar con un toque.
@@ -65,13 +75,39 @@ export function PlaybookPage() {
         }
         back={{ to: `/teams/${teamId}`, label: 'Playbooks' }}
         actions={
-          <>
-            <Button variant="secondary" onClick={() => setSharing(true)} disabled={!playbook.data}>
-              <Share2 aria-hidden className="size-4" />
-              Compartir
-            </Button>
-            {createButton}
-          </>
+          isCoach && (
+            <>
+              <Button
+                variant="secondary"
+                aria-pressed={shownToPlayers}
+                disabled={!playbook.data}
+                loading={updatePlaybook.isPending}
+                title="Los jugadores con cuenta solo ven los playbooks que haces visibles"
+                onClick={() =>
+                  updatePlaybook.mutate({
+                    playbookId,
+                    input: { visibleToPlayers: !shownToPlayers },
+                  })
+                }
+              >
+                {shownToPlayers ? (
+                  <Eye aria-hidden className="size-4" />
+                ) : (
+                  <EyeOff aria-hidden className="size-4" />
+                )}
+                {shownToPlayers ? 'Lo ven los jugadores' : 'Oculto a jugadores'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setSharing(true)}
+                disabled={!playbook.data}
+              >
+                <Share2 aria-hidden className="size-4" />
+                Compartir
+              </Button>
+              {createButton}
+            </>
+          )
         }
       />
       <ShareDialog
@@ -117,7 +153,9 @@ export function PlaybookPage() {
         )}
       </div>
 
-      <ErrorAlert message={errorText(duplicatePlay.error ?? deletePlay.error)} />
+      <ErrorAlert
+        message={errorText(duplicatePlay.error ?? deletePlay.error ?? updatePlaybook.error)}
+      />
 
       {plays.isPending ? (
         <PageSpinner />
@@ -134,8 +172,12 @@ export function PlaybookPage() {
           <EmptyState
             icon={Zap}
             title="Este playbook está vacío"
-            description="Crea la primera jugada a partir de una formación y después dibuja las rutas y bloqueos."
-            action={createButton}
+            description={
+              isCoach
+                ? 'Crea la primera jugada a partir de una formación y después dibuja las rutas y bloqueos.'
+                : 'El coach todavía no ha añadido jugadas.'
+            }
+            action={isCoach && createButton}
           />
         )
       ) : (
@@ -152,7 +194,10 @@ export function PlaybookPage() {
               >
                 <Link
                   to={`/teams/${teamId}/plays/${play.id}`}
-                  className="flex h-full flex-col gap-2 rounded-3xl bg-surface p-5 pr-28 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
+                  className={cn(
+                    'flex h-full flex-col gap-2 rounded-3xl bg-surface p-5 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]',
+                    isCoach && 'pr-28',
+                  )}
                 >
                   <span className="text-lg font-semibold">{play.name}</span>
                   {play.tags.length > 0 && (
@@ -171,29 +216,31 @@ export function PlaybookPage() {
                     Editada {formatDate(play.updatedAt)}
                   </span>
                 </Link>
-                <div className="absolute top-3 right-3 flex">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-slate-400 hover:text-turf-700 dark:hover:text-turf-300"
-                    aria-label={`Duplicar ${play.name}`}
-                    loading={duplicatePlay.isPending && duplicatePlay.variables === play.id}
-                    onClick={() => duplicatePlay.mutate(play.id)}
-                  >
-                    {!(duplicatePlay.isPending && duplicatePlay.variables === play.id) && (
-                      <Copy aria-hidden className="size-5" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-slate-400 hover:text-red-600"
-                    aria-label={`Borrar ${play.name}`}
-                    onClick={() => setDeleting(play)}
-                  >
-                    <Trash2 aria-hidden className="size-5" />
-                  </Button>
-                </div>
+                {isCoach && (
+                  <div className="absolute top-3 right-3 flex">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-slate-400 hover:text-turf-700 dark:hover:text-turf-300"
+                      aria-label={`Duplicar ${play.name}`}
+                      loading={duplicatePlay.isPending && duplicatePlay.variables === play.id}
+                      onClick={() => duplicatePlay.mutate(play.id)}
+                    >
+                      {!(duplicatePlay.isPending && duplicatePlay.variables === play.id) && (
+                        <Copy aria-hidden className="size-5" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-slate-400 hover:text-red-600"
+                      aria-label={`Borrar ${play.name}`}
+                      onClick={() => setDeleting(play)}
+                    >
+                      <Trash2 aria-hidden className="size-5" />
+                    </Button>
+                  </div>
+                )}
               </motion.li>
             ))}
           </AnimatePresence>

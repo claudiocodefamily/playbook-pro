@@ -107,3 +107,17 @@ export function describeAssignments(diagram: PlayDiagram, playerId: string): str
 
   return steps.sort((a, b) => a.t - b.t).map((step) => step.text);
 }
+
+/**
+ * Modo jugador con el que abre la jugada un jugador con cuenta: la primera de sus
+ * posiciones que aparece en la jugada, o null si no juega en ella.
+ */
+export function focusForPositions(
+  diagram: Pick<PlayDiagram, 'players'>,
+  positions: readonly Position[],
+): Focus {
+  const position = positions.find((candidate) =>
+    diagram.players.some((player) => player.position === candidate),
+  );
+  return position ? positionFocus(position) : null;
+}

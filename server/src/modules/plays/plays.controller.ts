@@ -23,6 +23,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { type AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { AllowPlayers } from '../../common/decorators/allow-players.decorator.js';
+import {
+  isPlayer,
+  Membership,
+  type TeamMembership,
+} from '../../common/decorators/team-member.decorator.js';
 import { TeamAccessGuard } from '../../common/guards/team-access.guard.js';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe.js';
 import { CreatePlayDto } from './dto/create-play.dto.js';
@@ -41,7 +47,7 @@ import { PlaysService } from './plays.service.js';
 @ApiBearerAuth()
 @UseGuards(TeamAccessGuard)
 @ApiNotFoundResponse({
-  description: 'El equipo o el playbook no existen, o no eres coach del equipo',
+  description: 'El equipo o el playbook no existen, o no eres del equipo',
 })
 @Controller('teams/:teamId/playbooks/:playbookId/plays')
 export class PlaybookPlaysController {
@@ -62,14 +68,18 @@ export class PlaybookPlaysController {
   }
 
   @Get()
+  @AllowPlayers()
   @ApiOperation({ summary: 'Lista las jugadas del playbook, con filtro por etiqueta o texto' })
   @ApiOkResponse({ type: [PlaySummaryResponseDto] })
   async findAll(
     @Param('teamId', ParseUuidPipe) teamId: string,
     @Param('playbookId', ParseUuidPipe) playbookId: string,
     @Query() query: ListPlaysQueryDto,
+    @Membership() membership: TeamMembership,
   ): Promise<PlaySummaryResponseDto[]> {
-    const plays = await this.plays.findAll(teamId, playbookId, query);
+    const plays = await this.plays.findAll(teamId, playbookId, query, {
+      playersOnly: isPlayer(membership),
+    });
     return plays.map((play) => PlaySummaryResponseDto.from(play));
   }
 }
@@ -79,20 +89,23 @@ export class PlaybookPlaysController {
 @ApiBearerAuth()
 @UseGuards(TeamAccessGuard)
 @ApiNotFoundResponse({
-  description: 'El equipo o la jugada no existen, o no eres coach del equipo',
+  description: 'El equipo o la jugada no existen, o no eres del equipo',
 })
 @Controller('teams/:teamId/plays/:playId')
 export class PlaysController {
   constructor(private readonly plays: PlaysService) {}
 
   @Get()
+  @AllowPlayers()
   @ApiOperation({ summary: 'Devuelve una jugada con su diagram' })
   @ApiOkResponse({ type: PlayResponseDto })
   async findOne(
     @Param('teamId', ParseUuidPipe) teamId: string,
     @Param('playId', ParseUuidPipe) playId: string,
+    @Membership() membership: TeamMembership,
   ): Promise<PlayResponseDto> {
-    return PlayResponseDto.from(await this.plays.findOne(teamId, playId));
+    const play = await this.plays.findOne(teamId, playId, { playersOnly: isPlayer(membership) });
+    return PlayResponseDto.from(play);
   }
 
   @Patch()

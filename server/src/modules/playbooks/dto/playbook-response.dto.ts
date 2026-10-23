@@ -18,6 +18,9 @@ export class PlaybookResponseDto {
   @ApiProperty()
   description!: string;
 
+  @ApiProperty({ description: 'Si los jugadores con cuenta pueden verlo' })
+  visibleToPlayers!: boolean;
+
   @ApiProperty({ description: 'Jugadas (no borradas) del playbook' })
   playCount!: number;
 
@@ -34,6 +37,7 @@ export class PlaybookResponseDto {
     dto.name = playbook.name;
     dto.side = playbook.side;
     dto.description = playbook.description;
+    dto.visibleToPlayers = playbook.visibleToPlayers;
     dto.playCount = playCount;
     dto.createdAt = playbook.createdAt;
     dto.updatedAt = playbook.updatedAt;

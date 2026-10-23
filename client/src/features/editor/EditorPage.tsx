@@ -46,6 +46,7 @@ import { PlaybackBar } from './PlaybackBar';
 import { FocusBar } from './FocusBar';
 import { NotesPanel, PresentationNotes } from './NotesPanel';
 import { PlayerPanel } from './PlayerPanel';
+import { PlayerPlayView } from './PlayerPlayView';
 import { SaveIndicator } from './SaveIndicator';
 import { TimelinePanel } from './TimelinePanel';
 import { ToolBar } from './ToolBar';
@@ -76,10 +77,16 @@ export function EditorPage() {
     enabled: Boolean(play.data),
   });
 
-  if (play.isPending || (play.data && playbook.isPending)) return <PageSpinner />;
+  if (play.isPending || team.isPending || (play.data && playbook.isPending)) {
+    return <PageSpinner />;
+  }
   if (play.isError) return <ErrorAlert message={errorText(play.error)} />;
   if (playbook.isError) return <ErrorAlert message={errorText(playbook.error)} />;
   if (!playbook.data) return <PageSpinner />;
+  // Un jugador solo mira: la jugada animada, sin herramientas.
+  if (team.data?.myRole === 'PLAYER') {
+    return <PlayerPlayView play={play.data} ruleset={team.data.ruleset} />;
+  }
 
   return (
     // key: si cambia la jugada se crea un editor nuevo, con su propio historial.

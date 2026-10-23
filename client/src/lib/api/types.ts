@@ -26,7 +26,10 @@ export interface Team {
   name: string;
   logoUrl?: string;
   ruleset: Ruleset;
+  /** Coaches del equipo. */
   memberCount: number;
+  /** Mi rol: los jugadores solo miran. */
+  myRole: TeamRole;
   createdAt: string;
   updatedAt: string;
 }
@@ -80,6 +83,8 @@ export interface Playbook {
   name: string;
   side: PlaybookSide;
   description: string;
+  /** Si los jugadores con cuenta lo ven. */
+  visibleToPlayers: boolean;
   playCount: number;
   createdAt: string;
   updatedAt: string;
@@ -147,4 +152,30 @@ export interface SharedPlaybook {
   description: string;
   plays: { id: string; name: string; tags: string[]; conceptIds: string[]; diagram: PlayDiagram }[];
   concepts: { id: string; name: string; explanation: string }[];
+}
+
+/** Quién soy en un equipo; si soy jugador, mi ficha del roster. */
+export interface TeamMe {
+  role: TeamRole;
+  rosterPlayer: { id: string; name: string; number: number; positions: Position[] } | null;
+}
+
+/** Acceso de un jugador del roster: su cuenta o su invitación pendiente. */
+export interface PlayerAccess {
+  rosterPlayerId: string;
+  account: { userId: string; name: string; email: string; joinedAt: string } | null;
+  inviteExpiresAt: string | null;
+}
+
+export interface PlayerInvite {
+  rosterPlayerId: string;
+  token: string;
+  expiresAt: string;
+}
+
+export interface InvitePreview {
+  teamName: string;
+  playerName: string;
+  number: number;
+  expiresAt: string;
 }
