@@ -10,6 +10,8 @@ const SPEED: Readonly<Record<BallAction, number>> = {
   handoff: 6,
   pitch: 10,
   pass: 18,
+  // Las patadas suben mucho: avanzan despacio aunque el balón vaya rápido.
+  kick: 14,
   fumble: 5,
 };
 /** Un handoff es mano a mano: dura lo mismo esté donde esté el RB. */
@@ -35,7 +37,8 @@ export function snapSpot(diagram: Pick<PlayDiagram, 'players'>): Point {
 
 export interface BallFlight {
   action: BallAction;
-  toPlayerId: string;
+  /** Quién lo recibe; null en una patada a un punto (field goal), que queda en el suelo. */
+  toPlayerId: string | null;
   /** Cuándo sale el balón y desde dónde. */
   releaseTime: number;
   from: Point;
@@ -59,7 +62,9 @@ export function ballFlights(diagram: PlayDiagram): BallFlight[] {
     const from = holder
       ? (positionsAt(diagram, releaseTime).get(holder) ?? snapSpot(diagram))
       : snapSpot(diagram);
-    const receiverAt = (t: number) => positionsAt(diagram, t).get(entry.playerId) ?? from;
+    const receiver = entry.playerId;
+    const receiverAt = (t: number) =>
+      entry.target ?? (receiver ? positionsAt(diagram, t).get(receiver) : undefined) ?? from;
     let to = receiverAt(releaseTime);
     let duration = flightSeconds(action, from, to);
     // Unas pocas iteraciones bastan para que el punto de recepción converja.
@@ -69,13 +74,13 @@ export function ballFlights(diagram: PlayDiagram): BallFlight[] {
     }
     flights.push({
       action,
-      toPlayerId: entry.playerId,
+      toPlayerId: receiver ?? null,
       releaseTime,
       from,
       catchTime: releaseTime + duration,
       to,
     });
-    holder = entry.playerId;
+    holder = receiver ?? null;
     lastCatch = releaseTime + duration;
   }
   return flights;
@@ -94,9 +99,21 @@ export interface BallState {
   holderId: string | null;
 }
 
+/** Altura máxima del arco según el tipo de envío (1 = la más alta). */
+const ARC: Readonly<Record<BallAction, number>> = {
+  snap: 0.3,
+  handoff: 0.3,
+  pitch: 0.3,
+  pass: 0.8,
+  kick: 1,
+  fumble: 0.3,
+};
+
 /** Estado del balón en el segundo `t`. */
 export function ballAt(diagram: PlayDiagram, t: number, flights = ballFlights(diagram)): BallState {
   let holderId: string | null = null;
+  // Dónde queda si nadie lo tiene: en el tee o delante del center, o donde cayó la patada.
+  let resting = snapSpot(diagram);
   for (const flight of flights) {
     if (t < flight.releaseTime) break;
     if (t < flight.catchTime) {
@@ -106,16 +123,15 @@ export function ballAt(diagram: PlayDiagram, t: number, flights = ballFlights(di
           x: flight.from.x + (flight.to.x - flight.from.x) * fraction,
           y: flight.from.y + (flight.to.y - flight.from.y) * fraction,
         },
-        // Los pases van en arco; el snap y el pitch, casi rasos.
-        height: Math.sin(Math.PI * fraction) * (flight.action === 'pass' ? 1 : 0.3),
+        // Pases y patadas van en arco; el snap y el pitch, casi rasos.
+        height: Math.sin(Math.PI * fraction) * ARC[flight.action],
         holderId: null,
       };
     }
     holderId = flight.toPlayerId;
+    resting = flight.to;
   }
-  const position = holderId
-    ? (positionsAt(diagram, t).get(holderId) ?? snapSpot(diagram))
-    : snapSpot(diagram);
+  const position = holderId ? (positionsAt(diagram, t).get(holderId) ?? resting) : resting;
   return { position, height: 0, holderId };
 }
 

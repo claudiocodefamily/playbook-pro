@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FormationSlot } from '../formation.js';
 import { newId } from '../ids.js';
 import { createEmptyDiagram, PlayDiagramSchema, type PlayDiagram } from './diagram.schema.js';
-import { cloneDiagramWithNewIds, createDiagramFromFormation } from './operations.js';
+import { cloneDiagramWithNewIds, createDiagramFromFormation, formationSide } from './operations.js';
 
 /** QB que da un handoff al RB, con un bloqueo del C sobre el nose tackle. */
 function runPlay(): PlayDiagram {
@@ -54,6 +54,26 @@ describe('createDiagramFromFormation', () => {
   it('pone en el lado D los jugadores de una formación defensiva', () => {
     const diagram = createDiagramFromFormation(slots, 'defense');
     expect(diagram.players.every((player) => player.side === 'D')).toBe(true);
+  });
+});
+
+describe('formationSide', () => {
+  it('en special teams, el equipo que patea va en O y el que recibe en D', () => {
+    const punt = [{ y: -1 }, { y: -14 }];
+    const puntReturn = [{ y: 1 }, { y: 40 }];
+    expect(formationSide(punt, 'special')).toBe('O');
+    expect(formationSide(puntReturn, 'special')).toBe('D');
+    expect(
+      createDiagramFromFormation(
+        [{ slotId: 'PR', position: 'S', label: 'PR', x: 0, y: 40 }],
+        'special',
+      ).players[0]?.side,
+    ).toBe('D');
+  });
+
+  it('fuera de special teams manda el lado del playbook', () => {
+    expect(formationSide([{ y: 5 }], 'offense')).toBe('O');
+    expect(formationSide([{ y: -5 }], 'defense')).toBe('D');
   });
 });
 

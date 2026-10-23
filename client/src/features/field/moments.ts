@@ -11,6 +11,7 @@ const RELEASE_LABELS = {
   handoff: 'Handoff',
   pitch: 'Pitch',
   pass: 'Lanzamiento',
+  kick: 'Patada',
   fumble: 'Fumble',
 };
 /** Dos momentos más cercanos que esto se juntan en uno. */
@@ -41,6 +42,11 @@ export function playMoments(
     moments.push({ t: flight.releaseTime, label: RELEASE_LABELS[flight.action] });
     if (flight.action === 'pass' || flight.action === 'pitch') {
       moments.push({ t: flight.catchTime, label: 'Recepción' });
+    } else if (flight.action === 'kick') {
+      moments.push({
+        t: flight.catchTime,
+        label: flight.toPlayerId ? 'Recepción' : 'Cae el balón',
+      });
     }
   }
   for (const keyframe of diagram.timeline.keyframes) moments.push(keyframe);

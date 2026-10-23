@@ -25,6 +25,7 @@ const BALL_LABELS = {
   handoff: 'Handoff',
   pitch: 'Pitch',
   pass: 'Pase',
+  kick: 'Patada',
   fumble: 'Fumble',
 };
 /** Paso de las flechas del teclado sobre una barra, en segundos. */
@@ -237,7 +238,11 @@ export function TimelinePanel({ playback }: { playback: Playback }) {
                 <BallMarker
                   key={`${index}-${flight.toPlayerId}`}
                   flight={flight}
-                  receiver={diagram.players.find((p) => p.id === flight.toPlayerId)?.label}
+                  receiver={
+                    flight.toPlayerId === null
+                      ? 'portería'
+                      : diagram.players.find((p) => p.id === flight.toPlayerId)?.label
+                  }
                   left={percent(flight.releaseTime)}
                   width={Math.max(percent(flight.catchTime) - percent(flight.releaseTime), 0.8)}
                   onPointerDown={

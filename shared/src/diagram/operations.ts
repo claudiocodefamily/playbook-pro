@@ -4,11 +4,25 @@ import { newId } from '../ids.js';
 import { createEmptyDiagram, type DiagramPlayer, type PlayDiagram } from './diagram.schema.js';
 
 /**
- * Lado de la cancha de los jugadores de una formación. Las de special teams se dibujan
- * como el equipo que patea (O); el editor podrá cambiarlo jugador a jugador.
+ * Lado de la cancha de una unidad. En special teams depende de la formación (ver
+ * `formationSide`); sin formación se toma el equipo que patea (O).
  */
 export function diagramSideFor(side: PlaybookSide): DiagramPlayer['side'] {
   return side === 'defense' ? 'D' : 'O';
+}
+
+/**
+ * Lado de los jugadores de una formación. En special teams el equipo que patea es
+ * siempre O (patea hacia y positivo) y el que recibe, D: se distingue porque las
+ * formaciones de retorno están colocadas campo abajo (y > 0).
+ */
+export function formationSide(
+  slots: readonly Pick<FormationSlot, 'y'>[],
+  side: PlaybookSide,
+): DiagramPlayer['side'] {
+  if (side !== 'special' || slots.length === 0) return diagramSideFor(side);
+  const meanY = slots.reduce((sum, slot) => sum + slot.y, 0) / slots.length;
+  return meanY > 0 ? 'D' : 'O';
 }
 
 /** Diagram de una jugada nueva con los jugadores colocados según una formación. */
@@ -20,7 +34,7 @@ export function createDiagramFromFormation(
     ...createEmptyDiagram(),
     players: slots.map((slot) => ({
       id: newId(),
-      side: diagramSideFor(side),
+      side: formationSide(slots, side),
       position: slot.position,
       label: slot.label,
       x: slot.x,
@@ -51,7 +65,7 @@ export function cloneDiagramWithNewIds(diagram: PlayDiagram): PlayDiagram {
     }
   }
   for (const entry of copy.ball.carrierTimeline) {
-    entry.playerId = mapPlayer(entry.playerId);
+    if (entry.playerId !== undefined) entry.playerId = mapPlayer(entry.playerId);
   }
   return copy;
 }

@@ -75,3 +75,52 @@ describe('fullPlaybackRange', () => {
     expect(fullPlaybackRange(diagram).end).toBeCloseTo(Math.max(2, lastCatch + 0.6));
   });
 });
+
+describe('patadas', () => {
+  const P = newId();
+  const PR = newId();
+  function punt(): PlayDiagram {
+    return {
+      ...createEmptyDiagram(),
+      players: [
+        { id: C, side: 'O', position: 'OL', label: 'LS', x: 0, y: -1 },
+        { id: P, side: 'O', position: 'P', label: 'P', x: 0, y: -14 },
+        { id: PR, side: 'D', position: 'S', label: 'PR', x: 0, y: 40 },
+      ],
+      ball: {
+        carrierTimeline: [
+          { t: 0, playerId: P, action: 'snap' },
+          { t: 2, playerId: PR, action: 'kick' },
+        ],
+      },
+    };
+  }
+
+  it('un punt vuela alto hasta el returner y lo deja en sus manos', () => {
+    const diagram = punt();
+    const kick = ballFlights(diagram)[1];
+    expect(kick?.to).toEqual({ x: 0, y: 40 });
+    const middle = ((kick?.releaseTime ?? 0) + (kick?.catchTime ?? 0)) / 2;
+    expect(ballAt(diagram, middle).height).toBeCloseTo(1);
+    expect(ballAt(diagram, (kick?.catchTime ?? 0) + 0.1).holderId).toBe(PR);
+  });
+
+  it('un field goal acaba en los postes y nadie lo tiene', () => {
+    const diagram: PlayDiagram = {
+      ...punt(),
+      ball: {
+        carrierTimeline: [
+          { t: 0, playerId: P, action: 'snap' },
+          { t: 1.3, action: 'kick', target: { x: 0, y: 30 } },
+        ],
+      },
+    };
+    const kick = ballFlights(diagram)[1];
+    expect(kick?.toPlayerId).toBeNull();
+    expect(ballAt(diagram, (kick?.catchTime ?? 0) + 1)).toEqual({
+      position: { x: 0, y: 30 },
+      height: 0,
+      holderId: null,
+    });
+  });
+});

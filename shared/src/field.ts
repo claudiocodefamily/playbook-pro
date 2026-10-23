@@ -17,3 +17,26 @@ export const HASH_OFFSET_YARDS: Readonly<Record<Ruleset, number>> = {
 };
 
 export const DEFAULT_RULESET: Ruleset = 'college';
+
+/**
+ * Mitad del ancho entre los postes de la portería: 18'6" en college y NFL, 23'4" en
+ * high school.
+ */
+export const GOAL_POST_HALF_WIDTH_YARDS: Readonly<Record<Ruleset, number>> = {
+  high_school: 23 / 3 / 2 + 4 / 36 / 2, // 23'4" = 7.78 yd
+  college: 18.5 / 3 / 2, // 18'6" = 6.17 yd
+  nfl: 18.5 / 3 / 2,
+};
+
+/**
+ * Dónde están los postes respecto a la LOS (en y), con el balón en `yardLine`: en la
+ * línea de fondo, 10 yardas detrás de la línea de gol rival.
+ */
+export function goalPostsY(yardLine: number): number {
+  return 110 - yardLine;
+}
+
+/** Línea de gol rival respecto a la LOS. */
+export function goalLineY(yardLine: number): number {
+  return 100 - yardLine;
+}

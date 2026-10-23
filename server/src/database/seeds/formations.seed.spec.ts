@@ -1,6 +1,7 @@
 import {
   createDiagramFromFormation,
   FormationSlotSchema,
+  formationSide,
   PlayDiagramSchema,
 } from '@playbook/shared';
 import { GLOBAL_FORMATIONS } from './formations.seed.js';
@@ -27,10 +28,18 @@ describe('GLOBAL_FORMATIONS', () => {
     });
 
     it('coloca a cada unidad en su lado de la LOS', () => {
-      // Defensa campo abajo (y > 0); ataque y special teams en su backfield (y < 0).
-      const direction = formation.side === 'defense' ? 1 : -1;
+      // Defensa y equipos que reciben campo abajo (y > 0); ataque y equipos que patean
+      // en su backfield (y < 0).
+      const direction = formationSide(formation.players, formation.side) === 'D' ? 1 : -1;
       expect(formation.players.every((slot) => Math.sign(slot.y) === direction)).toBe(true);
     });
+  });
+
+  it('special teams tiene formaciones para patear y para recibir', () => {
+    const special = GLOBAL_FORMATIONS.filter(({ side }) => side === 'special');
+    const sides = special.map((formation) => formationSide(formation.players, 'special'));
+    expect(sides.filter((side) => side === 'O')).toHaveLength(3);
+    expect(sides.filter((side) => side === 'D')).toHaveLength(3);
   });
 
   it.each(GLOBAL_FORMATIONS.filter(({ side }) => side === 'offense'))(
