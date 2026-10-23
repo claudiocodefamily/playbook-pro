@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { PageSpinner } from '../../components/ui/spinner';
 import { queries } from '../../lib/api/queries';
 import type { Play } from '../../lib/api/types';
+import { ExportPlayButton } from '../export/ExportButtons';
 import { PlayViewer } from '../shared/PlayViewer';
 import { focusForPositions } from './focus';
 
@@ -32,6 +33,16 @@ export function PlayerPlayView({ play, ruleset }: { play: Play; ruleset: Ruleset
           )
         }
         back={{ to: `/teams/${play.teamId}/playbooks/${play.playbookId}`, label: 'Jugadas' }}
+        actions={
+          <ExportPlayButton
+            teamId={play.teamId}
+            name={play.name}
+            tags={play.tags}
+            conceptIds={play.conceptIds}
+            side={null}
+            getDiagram={() => play.diagram}
+          />
+        }
       />
       {me.isPending ? (
         <PageSpinner />

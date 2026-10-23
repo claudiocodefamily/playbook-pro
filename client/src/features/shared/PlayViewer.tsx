@@ -8,7 +8,7 @@ import { FocusBar } from '../editor/FocusBar';
 import { NotesAside } from '../editor/NotesPanel';
 import { PlaybackBar } from '../editor/PlaybackBar';
 import { usePlayback } from '../editor/usePlayback';
-import { diagramReach, diagramWindow, FIELD_WIDTH } from '../field/geometry';
+import { FIELD_WIDTH, viewWindow } from '../field/geometry';
 
 interface PlayViewerProps {
   diagram: PlayDiagram;
@@ -31,10 +31,7 @@ export function PlayViewer({ diagram, ruleset, concepts, initialFocus = null }: 
   });
   const playback = usePlayback(store);
   const [showTrails, setShowTrails] = useState(true);
-  const [fieldWindow] = useState(() => {
-    const base = diagramWindow(diagram);
-    return { ...base, maxY: Math.max(base.maxY, diagramReach(diagram)) };
-  });
+  const [fieldWindow] = useState(() => viewWindow(diagram));
   const aspect = FIELD_WIDTH / (fieldWindow.maxY - fieldWindow.minY);
 
   return (

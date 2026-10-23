@@ -948,9 +948,16 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - El jugador ve las jugadas sin herramientas (el mismo visor que los links compartidos), con el modo jugador puesto en su posición del roster.
 - El coach quita el acceso desde la ficha; borrar la ficha también lo quita. La lista de coaches no incluye a los jugadores, y un equipo nunca se queda sin coach.
 
+**7a. Exportar a imagen y PDF** (hecho): todo se genera en el navegador, sin pasar por el servidor ni guardar archivos (no hay binarios en Mongo).
+
+- "Exportar" en una jugada descarga un PNG de 2400 px o un PDF de una página. "PDF" en un playbook descarga una portada con el índice y una página por jugada, con la cancha, los conceptos y las notas.
+- La cancha es la misma `FieldCanvas` del editor, dibujada fuera de la pantalla en la posición antes del snap (`features/export/PlayImage.tsx`), una jugada detrás de otra para no gastar memoria.
+- La casilla "Incluir los dibujos del lápiz" (`showDrawings`) deja o quita los rayones.
+- El PDF usa jsPDF (`features/export/pdf.ts`), que se carga solo al exportar. Lo pueden usar coaches y jugadores, porque solo exporta lo que cada uno ya puede ver.
+
 **Sigue**
 
-- Fase 4: exportar a PNG/PDF, quizzes y game plan.
+- Fase 4: quizzes y game plan.
 
 **Decisiones pendientes**
 

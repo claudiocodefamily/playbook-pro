@@ -29,6 +29,7 @@ import { SIDE_LABELS } from '../../lib/labels';
 import { cn } from '../../lib/cn';
 import { diagramReach, diagramWindow, FIELD_WIDTH, type FieldWindow } from '../field/geometry';
 import { momentAt } from '../field/moments';
+import { ExportPlayButton } from '../export/ExportButtons';
 import { FormationPicker } from '../plays/FormationPicker';
 import {
   addPlayer,
@@ -149,6 +150,14 @@ function Editor({ play, side, ruleset }: { play: Play; side: PlaybookSide; rules
               <History aria-hidden className="size-4" />
               <span className="hidden sm:inline">Historial</span>
             </Button>
+            <ExportPlayButton
+              teamId={play.teamId}
+              name={play.name}
+              tags={play.tags}
+              conceptIds={play.conceptIds}
+              side={side}
+              getDiagram={() => store.getState().diagram}
+            />
           </>
         }
       />
