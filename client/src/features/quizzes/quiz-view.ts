@@ -1,4 +1,11 @@
-import type { PlayDiagram, PlaybookSide, Position, QuizQuestionView } from '@playbook/shared';
+import {
+  type PlayDiagram,
+  type PlaybookSide,
+  type Position,
+  POSITIONS,
+  QUIZ_MAX_QUESTIONS,
+  type QuizQuestionView,
+} from '@playbook/shared';
 import { type FieldWindow, viewWindow } from '../field/geometry';
 
 export type AssignmentQuestionView = Extract<QuizQuestionView, { kind: 'assignment' }>;
@@ -34,6 +41,40 @@ export const QUIZ_POSITIONS: Readonly<Record<PlaybookSide, readonly Position[]>>
   defense: ['DL', 'LB', 'CB', 'S'],
   special: ['K', 'P', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S'],
 };
+
+export interface PositionChoice {
+  position: Position;
+  /** Preguntas que saldrían. null mientras no se sabe (cargando o error): no se bloquea. */
+  questions: number | null;
+}
+
+/**
+ * Las posiciones del formulario: las de la unidad del playbook y cualquier otra con tareas
+ * dibujadas (un blitz del LB en un playbook de ataque), en el orden de siempre.
+ */
+export function positionChoices(
+  side: PlaybookSide,
+  coverage: readonly { position: Position; questions: number }[] | undefined,
+): PositionChoice[] {
+  const counts = new Map(coverage?.map((entry) => [entry.position, entry.questions]));
+  return POSITIONS.filter(
+    (position) => QUIZ_POSITIONS[side].includes(position) || counts.has(position),
+  ).map((position) => ({
+    position,
+    questions: coverage ? (counts.get(position) ?? 0) : null,
+  }));
+}
+
+/** Preguntas que tendrá el quiz con esas posiciones, con el tope del quiz. */
+export function plannedQuestions(
+  choices: readonly PositionChoice[],
+  chosen: readonly Position[],
+): number {
+  const total = choices
+    .filter((choice) => chosen.includes(choice.position))
+    .reduce((sum, choice) => sum + (choice.questions ?? 0), 0);
+  return Math.min(total, QUIZ_MAX_QUESTIONS);
+}
 
 /** "3 de 4" o, si no lo ha respondido nunca, null. */
 export function scoreText(score: { correct: number; total: number } | null): string | null {

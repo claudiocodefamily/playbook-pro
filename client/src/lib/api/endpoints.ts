@@ -17,6 +17,7 @@ import type {
   PlayVersion,
   PlayVersionSummary,
   Quiz,
+  QuizCoverage,
   QuizResults,
   QuizSummary,
   RosterPlayer,
@@ -289,6 +290,10 @@ export const quizzesApi = {
     api.request<Quiz>(`/teams/${teamId}/quizzes/${quizId}/questions/${questionId}`, {
       method: 'DELETE',
     }),
+  coverage: (teamId: string, playbookId: string) =>
+    api.request<QuizCoverage>(
+      `/teams/${teamId}/quizzes/coverage?${new URLSearchParams({ playbookId })}`,
+    ),
   results: (teamId: string, quizId: string) =>
     api.request<QuizResults>(`/teams/${teamId}/quizzes/${quizId}/results`),
   submit: (teamId: string, quizId: string, answers: { questionId: string; optionId: string }[]) =>

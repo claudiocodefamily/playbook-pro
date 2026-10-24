@@ -8,7 +8,11 @@ import {
 } from '../diagram/diagram.schema.js';
 import { FIELD_HALF_WIDTH_YARDS } from '../field.js';
 import { newId } from '../ids.js';
-import { generateAssignmentQuestions, type QuizSourcePlay } from './generate.js';
+import {
+  countAssignmentQuestions,
+  generateAssignmentQuestions,
+  type QuizSourcePlay,
+} from './generate.js';
 import { QuizQuestionSchema } from './quiz.schema.js';
 
 function player(label: string, position: DiagramPlayer['position'], x: number, y: number) {
@@ -76,7 +80,7 @@ describe('generateAssignmentQuestions', () => {
     const correct = question?.options.find((option) => option.id === question.correctOptionId);
     const ends = question?.options.map((option) => option.assignments[0]?.points.at(-1));
 
-    expect(question?.options).toHaveLength(3);
+    expect(question?.options).toHaveLength(4);
     expect(correct?.assignments[0]?.points).toEqual([{ x: -15, y: 6 }]);
     // Espejo del slant y el go del Z trasladado al X.
     expect(ends).toEqual(
@@ -95,21 +99,49 @@ describe('generateAssignmentQuestions', () => {
     }
   });
 
-  it('no repite opciones iguales y salta al jugador sin alternativas', () => {
-    const qb = player('QB', 'QB', 0, -5);
-    const rb = player('RB', 'RB', 0, -7);
-    // Una carrera recta: su espejo es la misma y no hay otro jugador con tarea.
+  it('un blitz recto, única tarea del playbook, se completa con variantes de sí mismo', () => {
+    const lb = player('M', 'LB', 0, 5);
+    // Su espejo es el mismo blitz y no hay otro jugador con tarea.
     const diagram: PlayDiagram = {
       ...createEmptyDiagram(),
-      players: [qb, rb],
-      assignments: [route(rb.id, [{ x: 0, y: 5 }])],
+      players: [lb, player('DL', 'DL', 2, 1)],
+      assignments: [
+        {
+          id: newId(),
+          playerId: lb.id,
+          type: 'blitz',
+          points: [{ x: 0, y: -2 }],
+          style: { line: 'solid', end: 'arrow', curved: false },
+          startTime: 0,
+          endTime: 2,
+        },
+      ],
     };
-    const questions = generateAssignmentQuestions([{ id: newId(), name: 'Dive', diagram }], {
-      positions: ['RB'],
-      random: fixed,
-    });
+    const [question, ...rest] = generateAssignmentQuestions(
+      [{ id: newId(), name: 'Mike Blitz', diagram }],
+      { positions: ['LB'], random: fixed },
+    );
+    const ends = question?.options.map((option) => option.assignments[0]?.points.at(-1));
 
-    expect(questions).toEqual([]);
+    expect(rest).toEqual([]);
+    expect(QuizQuestionSchema.safeParse(question).success).toBe(true);
+    // El suyo, torcido 5 yardas a cada lado y a media profundidad.
+    expect(ends).toEqual(
+      expect.arrayContaining([
+        { x: 0, y: -2 },
+        { x: 5, y: -2 },
+        { x: -5, y: -2 },
+        { x: 0, y: 1.5 },
+      ]),
+    );
+  });
+
+  it('cuenta cuántas preguntas saldrían por posición', () => {
+    const { play } = meshPlay();
+    const other = meshPlay().play;
+
+    expect(countAssignmentQuestions([play, other])).toEqual({ WR: 4 });
+    expect(countAssignmentQuestions([])).toEqual({});
   });
 
   it('usa tareas de otras jugadas, mantiene la cancha dentro de los límites y respeta el máximo', () => {

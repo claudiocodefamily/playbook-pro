@@ -15,7 +15,7 @@ import { useTeamRole } from '../../hooks/useTeamRole';
 import { queries, useCreateQuiz } from '../../lib/api/queries';
 import { cn } from '../../lib/cn';
 import { errorText } from '../../lib/errors';
-import { QUIZ_POSITIONS, scoreText } from './quiz-view';
+import { plannedQuestions, positionChoices, scoreText } from './quiz-view';
 
 /** Quizzes del equipo. El coach los crea; el jugador ve los publicados y su mejor nota. */
 export function QuizzesPage() {
@@ -126,8 +126,17 @@ function CreateQuizModal({
 
   const list = playbooks.data ?? [];
   const playbook = list.find((candidate) => candidate.id === playbookId) ?? list[0];
-  const available = playbook ? QUIZ_POSITIONS[playbook.side] : [];
-  const chosen = positions.filter((position) => available.includes(position));
+  const coverage = useQuery({
+    ...queries.quizCoverage(teamId, playbook?.id ?? ''),
+    enabled: open && Boolean(playbook),
+  });
+  const choices = playbook ? positionChoices(playbook.side, coverage.data?.positions) : [];
+  // Solo cuentan las que dan preguntas (o todas, si el recuento no llegó).
+  const chosen = positions.filter((position) =>
+    choices.some((choice) => choice.position === position && choice.questions !== 0),
+  );
+  const planned = plannedQuestions(choices, chosen);
+  const nothingDrawn = coverage.isSuccess && coverage.data.positions.length === 0;
 
   const toggle = (position: Position) =>
     setPositions((current) =>
@@ -188,30 +197,53 @@ function CreateQuizModal({
               ¿A qué posiciones preguntas?
             </legend>
             <div className="flex flex-wrap gap-1.5">
-              {available.map((position) => {
+              {choices.map(({ position, questions }) => {
                 const selected = chosen.includes(position);
+                const empty = questions === 0;
                 return (
                   <button
                     key={position}
                     type="button"
                     aria-pressed={selected}
+                    disabled={empty}
+                    title={empty ? `Ningún ${position} tiene tareas dibujadas` : undefined}
                     onClick={() => toggle(position)}
                     className={cn(
-                      'min-h-10 min-w-12 rounded-xl px-3 text-sm font-semibold ring-1 transition-colors active:scale-95',
+                      'inline-flex min-h-10 min-w-12 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-semibold ring-1 transition-colors active:scale-95',
                       selected
                         ? 'bg-turf-700 text-white ring-turf-700'
                         : 'bg-surface text-slate-700 ring-slate-300 hover:bg-slate-50',
+                      empty && 'cursor-not-allowed text-slate-400 opacity-60 hover:bg-surface',
                     )}
                   >
                     {position}
+                    {questions !== null && questions > 0 && (
+                      <span
+                        className={cn(
+                          'rounded-full px-1.5 text-xs',
+                          selected ? 'bg-white/20' : 'bg-slate-100 text-slate-600',
+                        )}
+                      >
+                        {questions}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
-            <p className="text-xs text-slate-500">
-              Por cada jugador de esas posiciones con una tarea dibujada, la app pregunta qué hace
-              en la jugada y da su tarea mezclada con otras parecidas.
-            </p>
+            {nothingDrawn ? (
+              <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                Este playbook aún no tiene tareas dibujadas. Abre una jugada y dibuja a los
+                jugadores una <strong>Ruta</strong>, <strong>Bloqueo</strong>,{' '}
+                <strong>Blitz</strong> o <strong>Zona</strong>: las preguntas salen de ahí.
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500">
+                El número es cuántas preguntas salen. Por cada jugador con una ruta, bloqueo,
+                motion, blitz o zona dibujada, la app pregunta qué hace en la jugada. El lápiz y el
+                marcaje (man) no cuentan.
+              </p>
+            )}
           </fieldset>
           <ErrorAlert message={errorText(create.error)} />
           <Button
@@ -220,7 +252,9 @@ function CreateQuizModal({
             loading={create.isPending}
             disabled={!playbook || chosen.length === 0}
           >
-            Crear quiz
+            {planned > 0
+              ? `Crear quiz · ${planned} ${planned === 1 ? 'pregunta' : 'preguntas'}`
+              : 'Crear quiz'}
           </Button>
         </form>
       )}

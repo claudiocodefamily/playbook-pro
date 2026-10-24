@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import {
+  countAssignmentQuestions,
   generateAssignmentQuestions,
   migrateDiagram,
   newId,
+  POSITIONS,
   QUIZ_MAX_QUESTIONS,
   type QuizQuestion,
   QuizQuestionSchema,
+  type QuizSourcePlay,
 } from '@playbook/shared';
 import type { Model } from 'mongoose';
 import { toMongoUpdate } from '../../common/utils/mongo-update.js';
@@ -15,6 +18,7 @@ import { Play } from '../plays/schemas/play.schema.js';
 import { TeamsService } from '../teams/teams.service.js';
 import type { AddTextQuestionDto } from './dto/add-text-question.dto.js';
 import type { CreateQuizDto } from './dto/create-quiz.dto.js';
+import type { QuizCoverageResponseDto } from './dto/quiz-coverage.dto.js';
 import type { AttemptResultResponseDto, QuizScoreDto } from './dto/quiz-response.dto.js';
 import type { QuizResultsResponseDto } from './dto/quiz-results-response.dto.js';
 import type { SubmitAttemptDto } from './dto/submit-attempt.dto.js';
@@ -45,24 +49,8 @@ export class QuizzesService {
 
   /** Crea el quiz con preguntas sacadas de las jugadas dibujadas del playbook. */
   async create(teamId: string, userId: string, dto: CreateQuizDto): Promise<QuizDocument> {
-    await this.playbooks.findOne(teamId, dto.playbookId);
-    const plays = await this.playModel
-      .find({
-        teamId,
-        playbookId: dto.playbookId,
-        deletedAt: null,
-        ...(dto.playIds ? { _id: { $in: dto.playIds } } : {}),
-      })
-      .sort({ name: 1 })
-      .exec();
-    const questions = generateAssignmentQuestions(
-      plays.map((play) => ({
-        id: play._id,
-        name: play.name,
-        diagram: migrateDiagram(play.diagram),
-      })),
-      { positions: dto.positions },
-    );
+    const plays = await this.sourcePlays(teamId, dto.playbookId, dto.playIds);
+    const questions = generateAssignmentQuestions(plays, { positions: dto.positions });
     if (questions.length === 0) {
       throw new BadRequestException(
         'No hay jugadas con tareas dibujadas para esas posiciones. Dibuja sus rutas, bloqueos o zonas y vuelve a intentarlo.',
@@ -75,6 +63,39 @@ export class QuizzesService {
       questions: questions.map((question) => QuizQuestionSchema.parse(question)),
       createdBy: userId,
     });
+  }
+  /** Cuántas preguntas saldrían de cada posición con las jugadas del playbook. */
+  async coverage(teamId: string, playbookId: string): Promise<QuizCoverageResponseDto> {
+    const counts = countAssignmentQuestions(await this.sourcePlays(teamId, playbookId));
+    return {
+      positions: POSITIONS.flatMap((position) => {
+        const questions = counts[position] ?? 0;
+        return questions > 0 ? [{ position, questions }] : [];
+      }),
+    };
+  }
+
+  /** Las jugadas del playbook (o solo esas), con el diagram al día, ordenadas por nombre. */
+  private async sourcePlays(
+    teamId: string,
+    playbookId: string,
+    playIds?: readonly string[],
+  ): Promise<QuizSourcePlay[]> {
+    await this.playbooks.findOne(teamId, playbookId);
+    const plays = await this.playModel
+      .find({
+        teamId,
+        playbookId,
+        deletedAt: null,
+        ...(playIds ? { _id: { $in: playIds } } : {}),
+      })
+      .sort({ name: 1 })
+      .exec();
+    return plays.map((play) => ({
+      id: play._id,
+      name: play.name,
+      diagram: migrateDiagram(play.diagram),
+    }));
   }
 
   /**

@@ -75,22 +75,38 @@ function shapeOf(player: DiagramPlayer, assignments: readonly Assignment[]): Sha
   return { assignments: cleaned, origin: { x: player.x, y: player.y }, key };
 }
 
-/** Lleva una forma al jugador `player`, opcionalmente en espejo (izquierda ↔ derecha). */
+/** Cómo se deforma una tarea al trasladarla: recibe y devuelve la distancia al jugador. */
+type Bend = (offset: Point) => Point;
+
+const same: Bend = (offset) => offset;
+const mirrored: Bend = ({ x, y }) => ({ x: -x, y });
+
+/** Yardas que se tuerce una variante hacia un lado: un gap o una ruta de distancia. */
+const VARIANT_SHIFT_YARDS = 5;
+
+/**
+ * Variantes de la propia tarea, para cuando no hay bastantes tareas de otros jugadores:
+ * torcida hacia un lado, hacia el otro, o a la mitad de profundidad. Así un blitz recto, que
+ * es igual a su espejo, sigue teniendo opciones falsas aunque sea la única tarea dibujada.
+ */
+const VARIANTS: readonly Bend[] = [
+  ({ x, y }) => ({ x: x + VARIANT_SHIFT_YARDS, y }),
+  ({ x, y }) => ({ x: x - VARIANT_SHIFT_YARDS, y }),
+  ({ x, y }) => ({ x, y: y / 2 }),
+];
+
+/** Lleva una forma al jugador `player`, opcionalmente deformada (en espejo, torcida…). */
 function placeShape(
   shape: Shape,
   player: DiagramPlayer,
-  mirror = false,
+  bend: Bend = same,
 ): { assignments: Assignment[]; key: string } {
   const move = (point: Point): Point => {
-    const dx = point.x - shape.origin.x;
+    const offset = bend({ x: point.x - shape.origin.x, y: point.y - shape.origin.y });
     return {
       // Primero se redondea y luego se recorta: redondear la banda (26.666…) la sacaría del campo.
-      x: clamp(
-        round(player.x + (mirror ? -dx : dx)),
-        -FIELD_HALF_WIDTH_YARDS,
-        FIELD_HALF_WIDTH_YARDS,
-      ),
-      y: clamp(round(player.y + point.y - shape.origin.y), MIN_Y, MAX_Y),
+      x: clamp(round(player.x + offset.x), -FIELD_HALF_WIDTH_YARDS, FIELD_HALF_WIDTH_YARDS),
+      y: clamp(round(player.y + offset.y), MIN_Y, MAX_Y),
     };
   };
   const assignments = shape.assignments.map((assignment): Assignment => ({
@@ -119,8 +135,8 @@ function describePlayer(player: DiagramPlayer): string {
  * Preguntas "¿qué hace este jugador?" a partir de las jugadas dibujadas. Para cada jugador
  * de las posiciones pedidas con una tarea dibujada: la respuesta es su tarea, y las
  * opciones falsas son su tarea en espejo y las tareas de otros jugadores del mismo lado
- * (de esta jugada o de las otras), puestas en su sitio. Si no hay al menos una opción
- * falsa distinta, el jugador no entra.
+ * (de esta jugada o de las otras), puestas en su sitio. Si faltan, se completan con
+ * variantes de su propia tarea. Si aun así no hay una opción falsa distinta, no entra.
  */
 export function generateAssignmentQuestions(
   plays: readonly QuizSourcePlay[],
@@ -157,11 +173,12 @@ export function generateAssignmentQuestions(
         distractors.push(option.assignments);
       };
       // El espejo primero: confundir un slant hacia dentro con uno hacia fuera es el error típico.
-      offer(placeShape(own.shape, player, true));
+      offer(placeShape(own.shape, player, mirrored));
       const others = shapes.filter(
         (candidate) => candidate !== own && candidate.player.side === player.side,
       );
       for (const other of shuffle(others, random)) offer(placeShape(other.shape, player));
+      for (const variant of VARIANTS) offer(placeShape(own.shape, player, variant));
       if (distractors.length === 0) continue;
 
       const correctOption = { id: newId(), assignments: correct.assignments };
@@ -191,4 +208,28 @@ export function generateAssignmentQuestions(
     }
   }
   return questions;
+}
+
+/**
+ * Cuántas preguntas saldrían por cada posición, sin el límite de preguntas: sirve para que el
+ * coach vea qué posiciones tienen tareas dibujadas antes de crear el quiz.
+ */
+export function countAssignmentQuestions(
+  plays: readonly QuizSourcePlay[],
+): Partial<Record<Position, number>> {
+  // Por jugada y jugador: una jugada duplicada puede repetir los ids de sus jugadores.
+  const positionOf = new Map(
+    plays.flatMap((play) =>
+      play.diagram.players.map((player) => [`${play.id}:${player.id}`, player.position] as const),
+    ),
+  );
+  const counts: Partial<Record<Position, number>> = {};
+  for (const question of generateAssignmentQuestions(plays, {
+    positions: [...new Set(positionOf.values())],
+    maxQuestions: Number.POSITIVE_INFINITY,
+  })) {
+    const position = positionOf.get(`${question.playId}:${question.playerId}`);
+    if (position) counts[position] = (counts[position] ?? 0) + 1;
+  }
+  return counts;
 }
