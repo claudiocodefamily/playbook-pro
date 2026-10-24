@@ -39,3 +39,17 @@ export const QUIZ_POSITIONS: Readonly<Record<PlaybookSide, readonly Position[]>>
 export function scoreText(score: { correct: number; total: number } | null): string | null {
   return score ? `${score.correct} de ${score.total}` : null;
 }
+
+/** Jugadores ordenados por su mejor nota (en proporción); los que no respondieron, al final. */
+export function rankPlayers<
+  T extends { name: string; best: { correct: number; total: number } | null },
+>(players: readonly T[]): T[] {
+  const ratio = (player: T) =>
+    player.best && player.best.total > 0 ? player.best.correct / player.best.total : -1;
+  return [...players].sort((a, b) => ratio(b) - ratio(a) || a.name.localeCompare(b.name));
+}
+
+/** true si menos de la mitad acierta la pregunta: hay que repasarla. */
+export function needsReview(stat: { answered: number; correct: number }): boolean {
+  return stat.answered > 0 && stat.correct / stat.answered < 0.5;
+}

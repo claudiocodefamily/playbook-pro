@@ -22,6 +22,7 @@ import type { Quiz } from '../../lib/api/types';
 import { cn } from '../../lib/cn';
 import { errorText } from '../../lib/errors';
 import { QuizField } from './QuizField';
+import { QuestionStat, QuizResultsPanel } from './QuizResults';
 import { optionDiagram, optionLetter, questionWindow } from './quiz-view';
 
 /** El quiz visto por el coach: sus preguntas con la respuesta, para revisarlo y publicarlo. */
@@ -96,6 +97,7 @@ export function QuizPage() {
         <ErrorAlert message={errorText(quiz.error)} />
       ) : (
         <>
+          <QuizResultsPanel teamId={teamId} quizId={quizId} published={published} />
           <ol className="flex flex-col gap-4">
             {questions.map((question, index) => (
               <li
@@ -117,6 +119,7 @@ export function QuizPage() {
                     <Trash2 aria-hidden className="size-4" />
                   </Button>
                 </div>
+                <QuestionStat teamId={teamId} quizId={quizId} questionId={question.id} />
                 {question.kind === 'assignment' ? (
                   <AssignmentAnswers
                     question={question}

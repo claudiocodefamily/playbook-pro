@@ -37,6 +37,7 @@ import {
   QuizResponseDto,
   QuizSummaryResponseDto,
 } from './dto/quiz-response.dto.js';
+import { QuizResultsResponseDto } from './dto/quiz-results-response.dto.js';
 import { SubmitAttemptDto } from './dto/submit-attempt.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { QuizzesService } from './quizzes.service.js';
@@ -151,6 +152,19 @@ export class QuizzesController {
     @Param('questionId', ParseUuidPipe) questionId: string,
   ): Promise<QuizResponseDto> {
     return this.full(await this.quizzes.removeQuestion(teamId, quizId, questionId));
+  }
+
+  @Get(':quizId/results')
+  @ApiOperation({
+    summary: 'Resultados del quiz: la nota de cada jugador con cuenta y los aciertos por pregunta',
+    description: 'Los aciertos por pregunta cuentan el último intento de cada jugador.',
+  })
+  @ApiOkResponse({ type: QuizResultsResponseDto })
+  results(
+    @Param('teamId', ParseUuidPipe) teamId: string,
+    @Param('quizId', ParseUuidPipe) quizId: string,
+  ): Promise<QuizResultsResponseDto> {
+    return this.quizzes.results(teamId, quizId);
   }
 
   @Post(':quizId/attempts')

@@ -1,9 +1,11 @@
 import { createEmptyDiagram, newId } from '@playbook/shared';
 import { describe, expect, it } from 'vitest';
 import {
+  needsReview,
   optionDiagram,
   optionLetter,
   questionWindow,
+  rankPlayers,
   scoreText,
   type AssignmentQuestionView,
 } from './quiz-view';
@@ -52,5 +54,26 @@ describe('quiz-view', () => {
     expect([0, 1, 2, 3].map(optionLetter)).toEqual(['A', 'B', 'C', 'D']);
     expect(scoreText({ correct: 3, total: 4 })).toBe('3 de 4');
     expect(scoreText(null)).toBeNull();
+  });
+
+  it('ordena a los jugadores por su mejor nota, sin responder al final', () => {
+    const players = [
+      { name: 'Ana', best: null },
+      { name: 'Luis', best: { correct: 1, total: 4 } },
+      { name: 'Juan', best: { correct: 3, total: 4 } },
+      { name: 'Bea', best: { correct: 3, total: 4 } },
+    ];
+    expect(rankPlayers(players).map((player) => player.name)).toEqual([
+      'Bea',
+      'Juan',
+      'Luis',
+      'Ana',
+    ]);
+  });
+
+  it('marca para repasar lo que falla más de la mitad', () => {
+    expect(needsReview({ answered: 4, correct: 1 })).toBe(true);
+    expect(needsReview({ answered: 4, correct: 2 })).toBe(false);
+    expect(needsReview({ answered: 0, correct: 0 })).toBe(false);
   });
 });
