@@ -14,6 +14,7 @@ import type {
   PlayVersion,
   PlayVersionSummary,
   Quiz,
+  QuizResults,
   QuizSummary,
   RosterPlayer,
   SharedPlaybook,
@@ -285,6 +286,8 @@ export const quizzesApi = {
     api.request<Quiz>(`/teams/${teamId}/quizzes/${quizId}/questions/${questionId}`, {
       method: 'DELETE',
     }),
+  results: (teamId: string, quizId: string) =>
+    api.request<QuizResults>(`/teams/${teamId}/quizzes/${quizId}/results`),
   submit: (teamId: string, quizId: string, answers: { questionId: string; optionId: string }[]) =>
     api.request<AttemptResult>(`/teams/${teamId}/quizzes/${quizId}/attempts`, {
       method: 'POST',

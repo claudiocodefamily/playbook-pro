@@ -962,11 +962,11 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - El quiz guarda una copia de las preguntas (colección `quizzes`): si luego cambias la jugada, el quiz no cambia. Al leerlo, los diagrams copiados pasan por `migrateDiagram`.
 - El coach puede quitar preguntas, añadir preguntas escritas con respuestas de texto y publicarlo ("Oculto a jugadores / Publicado"). Nace oculto. Máximo 40 preguntas.
 - El jugador responde una pregunta por pantalla. Al enviar, el servidor corrige (la respuesta correcta nunca llega antes al jugador), guarda el intento en `quiz_attempts` y devuelve la nota con la corrección. Se puede repetir; la lista muestra la mejor nota.
-- Falta 7b-2: la pantalla de resultados del coach.
+- 7b-2 (hecho): en la página del quiz, el coach ve "Resultados": cada jugador con cuenta con su mejor nota, su último intento y cuántas veces lo hizo (los que no lo respondieron también aparecen). Cada pregunta muestra cuántos la aciertan en su último intento y se marca "para repasar" si falla más de la mitad (`GET /teams/:teamId/quizzes/:quizId/results`). Los intentos del coach al probarlo no cuentan.
 
 **Sigue**
 
-- 7b-2: resultados de los quizzes para el coach. Después, 7c: game plan.
+- 7c: game plan.
 
 **Decisiones pendientes**
 

@@ -63,6 +63,13 @@ export const queries = {
       queryKey: ['teams', teamId, 'quizzes', quizId],
       queryFn: () => quizzesApi.get(teamId, quizId),
     }),
+  quizResults: (teamId: string, quizId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'quizzes', quizId, 'results'],
+      queryFn: () => quizzesApi.results(teamId, quizId),
+      // Los jugadores responden desde su móvil: se vuelve a pedir al abrir la pantalla.
+      staleTime: 0,
+    }),
   invite: (token: string) =>
     queryOptions({
       queryKey: ['invites', token],

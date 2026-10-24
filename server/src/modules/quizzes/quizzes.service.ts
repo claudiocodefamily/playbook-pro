@@ -12,9 +12,11 @@ import type { Model } from 'mongoose';
 import { toMongoUpdate } from '../../common/utils/mongo-update.js';
 import { PlaybooksService, type Visibility } from '../playbooks/playbooks.service.js';
 import { Play } from '../plays/schemas/play.schema.js';
+import { TeamsService } from '../teams/teams.service.js';
 import type { AddTextQuestionDto } from './dto/add-text-question.dto.js';
 import type { CreateQuizDto } from './dto/create-quiz.dto.js';
 import type { AttemptResultResponseDto, QuizScoreDto } from './dto/quiz-response.dto.js';
+import type { QuizResultsResponseDto } from './dto/quiz-results-response.dto.js';
 import type { SubmitAttemptDto } from './dto/submit-attempt.dto.js';
 import type { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { QuizAttempt, type QuizAnswer } from './schemas/quiz-attempt.schema.js';
@@ -38,6 +40,7 @@ export class QuizzesService {
     @InjectModel(QuizAttempt.name) private readonly attemptModel: Model<QuizAttempt>,
     @InjectModel(Play.name) private readonly playModel: Model<Play>,
     private readonly playbooks: PlaybooksService,
+    private readonly teams: TeamsService,
   ) {}
 
   /** Crea el quiz con preguntas sacadas de las jugadas dibujadas del playbook. */
@@ -227,5 +230,54 @@ export class QuizzesService {
       ])
       .exec();
     return new Map(rows.map((row) => [row._id, { attempts: row.attempts, best: row.best }]));
+  }
+
+  /**
+   * Resultados para el coach: cada jugador con cuenta (aunque no lo haya respondido) y
+   * cuántos aciertan cada pregunta en su último intento, para saber qué repasar.
+   */
+  async results(teamId: string, quizId: string): Promise<QuizResultsResponseDto> {
+    const [quiz, players] = await Promise.all([
+      this.findOne(teamId, quizId),
+      this.teams.listPlayers(teamId),
+    ]);
+    const attempts = await this.attemptModel
+      .find({ teamId, quizId, userId: { $in: players.map(({ member }) => member.userId) } })
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+
+    const latest = new Map<string, (typeof attempts)[number]>();
+    for (const attempt of attempts) {
+      if (!latest.has(attempt.userId)) latest.set(attempt.userId, attempt);
+    }
+    const rows = players.map(({ rosterPlayerId, member }) => {
+      const mine = attempts.filter((attempt) => attempt.userId === member.userId);
+      const best = mine.reduce<(typeof mine)[number] | null>(
+        (top, attempt) => (!top || attempt.correct > top.correct ? attempt : top),
+        null,
+      );
+      const last = latest.get(member.userId);
+      return {
+        rosterPlayerId,
+        userId: member.userId,
+        name: member.name,
+        attempts: mine.length,
+        best: best ? { correct: best.correct, total: best.total } : null,
+        last: last ? { correct: last.correct, total: last.total, at: last.createdAt } : null,
+      };
+    });
+
+    const questions = quiz.questions.map((question) => {
+      const answers = [...latest.values()].flatMap((attempt) =>
+        attempt.answers.filter((answer) => answer.questionId === question.id),
+      );
+      return {
+        questionId: question.id,
+        answered: answers.length,
+        correct: answers.filter((answer) => answer.isCorrect).length,
+      };
+    });
+    return { players: rows, questions };
   }
 }

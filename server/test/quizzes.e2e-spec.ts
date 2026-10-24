@@ -241,6 +241,70 @@ describe('Quizzes (e2e)', () => {
     ]);
   });
 
+  it('el coach ve la nota de cada jugador y los aciertos por pregunta', async () => {
+    const s = await setup();
+    const quiz = await createQuiz(s);
+    const url = `${s.teamUrl}/quizzes/${quiz.id}`;
+    await http().patch(url).set(s.coach.auth).send({ visibleToPlayers: true }).expect(200);
+    const player = await joinedPlayer(s);
+    const [first, second] = quiz.questions;
+    if (!first?.correctOptionId || !second?.correctOptionId) throw new Error('faltan preguntas');
+
+    const empty = await http().get(`${url}/results`).set(s.coach.auth).expect(200);
+    expect(empty.body).toEqual({
+      players: [
+        expect.objectContaining({
+          rosterPlayerId: s.rosterId,
+          name: 'Juan',
+          attempts: 0,
+          best: null,
+          last: null,
+        }),
+      ],
+      questions: [
+        { questionId: first.id, answered: 0, correct: 0 },
+        { questionId: second.id, answered: 0, correct: 0 },
+      ],
+    });
+
+    // Primero acierta las dos; luego solo la segunda. Cuenta su último intento.
+    const answer = (questionId: string, optionId: string) => ({ questionId, optionId });
+    await http()
+      .post(`${url}/attempts`)
+      .set(player.auth)
+      .send({
+        answers: [
+          answer(first.id, first.correctOptionId),
+          answer(second.id, second.correctOptionId),
+        ],
+      })
+      .expect(201);
+    await http()
+      .post(`${url}/attempts`)
+      .set(player.auth)
+      .send({ answers: [answer(second.id, second.correctOptionId)] })
+      .expect(201);
+    // Los intentos del coach (al probarlo) no cuentan.
+    await http().post(`${url}/attempts`).set(s.coach.auth).send({ answers: [] }).expect(201);
+
+    const results = await http().get(`${url}/results`).set(s.coach.auth).expect(200);
+    expect(results.body).toEqual({
+      players: [
+        expect.objectContaining({
+          name: 'Juan',
+          attempts: 2,
+          best: { correct: 2, total: 2 },
+          last: expect.objectContaining({ correct: 1, total: 2 }),
+        }),
+      ],
+      questions: [
+        { questionId: first.id, answered: 1, correct: 0 },
+        { questionId: second.id, answered: 1, correct: 1 },
+      ],
+    });
+    await http().get(`${url}/results`).set(player.auth).expect(403);
+  });
+
   it('aísla los quizzes por equipo y borra los intentos con el quiz', async () => {
     const s = await setup();
     const quiz = await createQuiz(s);

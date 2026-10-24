@@ -218,3 +218,16 @@ export interface AttemptResult {
   }[];
   createdAt: string;
 }
+
+export interface QuizResults {
+  players: {
+    rosterPlayerId: string;
+    userId: string;
+    name: string;
+    attempts: number;
+    best: QuizScore | null;
+    last: (QuizScore & { at: string }) | null;
+  }[];
+  /** Aciertos de cada pregunta en el último intento de cada jugador. */
+  questions: { questionId: string; answered: number; correct: number }[];
+}
