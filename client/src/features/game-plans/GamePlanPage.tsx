@@ -24,6 +24,7 @@ import { useTeamRole } from '../../hooks/useTeamRole';
 import { queries, useDeleteGamePlan, useUpdateGamePlan } from '../../lib/api/queries';
 import type { GamePlan, GamePlanSituation } from '../../lib/api/types';
 import { errorText } from '../../lib/errors';
+import { CallSheetButton } from './CallSheetButton';
 import { PlayPicker } from './PlayPicker';
 import {
   addPlay,
@@ -66,8 +67,11 @@ export function GamePlanPage() {
         }
         back={{ to: `/teams/${teamId}/game-plans`, label: 'Game plans' }}
         actions={
-          isCoach && (
+          !isCoach ? (
+            <CallSheetButton teamId={teamId} plan={plan.data} />
+          ) : (
             <>
+              <CallSheetButton teamId={teamId} plan={plan.data} />
               <Button
                 variant="secondary"
                 aria-pressed={published}

@@ -970,11 +970,11 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - Nace con las situaciones típicas (`DEFAULT_GAME_PLAN_SITUATIONS` en `shared`): 1st & 10, 3rd & corto/medio/largo, red zone, goal line, 2 minutos y backed up. El coach las renombra, quita o añade (máximo 16) y en cada una pone jugadas de cualquier playbook, en orden (máximo 30).
 - Las jugadas se guardan por id: si se editan, el game plan ve la versión nueva; si se borran, desaparecen de él. El PATCH sustituye todas las situaciones y comprueba que las jugadas existen y son del equipo.
 - Nace oculto a los jugadores. Publicado, el jugador solo ve las situaciones con jugadas y solo las jugadas de playbooks visibles para jugadores.
-- Falta 7c-2: el call sheet en PDF.
+- 7c-2 (hecho): botón "Call sheet" en el game plan (coaches y jugadores). Descarga un PDF A4 horizontal con cuatro columnas: cada situación con sus jugadas numeradas, como la hoja que se lleva en la banda. Si una situación no cabe, sigue en la columna siguiente con "(sigue)" y, si hace falta, en otra hoja (`layoutCallSheet` en `features/export/call-sheet.ts`, con tests). Opcional: el dibujo de cada jugada debajo de su nombre. Las situaciones vacías no salen.
 
 **Sigue**
 
-- 7c-2: call sheet imprimible en PDF.
+- Fase 4 completa. Siguiente: revisar el roadmap y decidir la Fase 5.
 
 **Decisiones pendientes**
 
