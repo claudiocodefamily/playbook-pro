@@ -13,6 +13,9 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SharedPlaybookPage } from './features/shared/SharedPlaybookPage';
 import { JoinPage } from './features/join/JoinPage';
+import { QuizPage } from './features/quizzes/QuizPage';
+import { QuizTakePage } from './features/quizzes/QuizTakePage';
+import { QuizzesPage } from './features/quizzes/QuizzesPage';
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +50,9 @@ export const router = createBrowserRouter([
       { path: 'teams/:teamId/roster', element: <RosterPage /> },
       { path: 'teams/:teamId/glossary', element: <GlossaryPage /> },
       { path: 'teams/:teamId/coaches', element: <CoachesPage /> },
+      { path: 'teams/:teamId/quizzes', element: <QuizzesPage /> },
+      { path: 'teams/:teamId/quizzes/:quizId', element: <QuizPage /> },
+      { path: 'teams/:teamId/quizzes/:quizId/play', element: <QuizTakePage /> },
       { path: 'teams/:teamId/playbooks/:playbookId', element: <PlaybookPage /> },
       { path: 'teams/:teamId/plays/:playId', element: <EditorPage /> },
       { path: '*', element: <NotFoundPage /> },

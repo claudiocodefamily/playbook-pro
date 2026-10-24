@@ -8,11 +8,15 @@ import {
   playerAccountsApi,
   type PlayFilters,
   playsApi,
+  type QuizInput,
+  quizzesApi,
   type RosterInput,
   rosterApi,
   shareLinksApi,
   teamsApi,
+  type TextQuestionInput,
 } from './endpoints';
+import type { Quiz } from './types';
 
 /**
  * Claves y consultas de TanStack Query. Guarda en caché lo que ya se cargó, así volver
@@ -48,6 +52,16 @@ export const queries = {
       queryFn: () => playerAccountsApi.list(teamId),
       // Cambia cuando el jugador acepta en su móvil: se vuelve a pedir al abrir la pantalla.
       staleTime: 0,
+    }),
+  quizzes: (teamId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'quizzes'],
+      queryFn: () => quizzesApi.list(teamId),
+    }),
+  quiz: (teamId: string, quizId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'quizzes', quizId],
+      queryFn: () => quizzesApi.get(teamId, quizId),
     }),
   invite: (token: string) =>
     queryOptions({
@@ -314,5 +328,66 @@ export function useAcceptInvite() {
   return useMutation({
     mutationFn: (token: string) => playerAccountsApi.accept(token),
     onSuccess: () => client.invalidateQueries({ queryKey: queries.teams().queryKey }),
+  });
+}
+
+/** Guarda el quiz que devuelve el servidor y refresca el listado. */
+function useQuizSaved(teamId: string) {
+  const client = useQueryClient();
+  return (quiz: Quiz) => {
+    client.setQueryData(queries.quiz(teamId, quiz.id).queryKey, quiz);
+    void client.invalidateQueries({ queryKey: queries.quizzes(teamId).queryKey, exact: true });
+  };
+}
+
+export function useCreateQuiz(teamId: string) {
+  const saved = useQuizSaved(teamId);
+  return useMutation({
+    mutationFn: (input: QuizInput) => quizzesApi.create(teamId, input),
+    onSuccess: saved,
+  });
+}
+
+export function useUpdateQuiz(teamId: string, quizId: string) {
+  const saved = useQuizSaved(teamId);
+  return useMutation({
+    mutationFn: (input: Parameters<typeof quizzesApi.update>[2]) =>
+      quizzesApi.update(teamId, quizId, input),
+    onSuccess: saved,
+  });
+}
+
+export function useDeleteQuiz(teamId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (quizId: string) => quizzesApi.remove(teamId, quizId),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: queries.quizzes(teamId).queryKey, exact: true }),
+  });
+}
+
+export function useAddQuizQuestion(teamId: string, quizId: string) {
+  const saved = useQuizSaved(teamId);
+  return useMutation({
+    mutationFn: (input: TextQuestionInput) => quizzesApi.addQuestion(teamId, quizId, input),
+    onSuccess: saved,
+  });
+}
+
+export function useRemoveQuizQuestion(teamId: string, quizId: string) {
+  const saved = useQuizSaved(teamId);
+  return useMutation({
+    mutationFn: (questionId: string) => quizzesApi.removeQuestion(teamId, quizId, questionId),
+    onSuccess: saved,
+  });
+}
+
+export function useSubmitQuiz(teamId: string, quizId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (answers: { questionId: string; optionId: string }[]) =>
+      quizzesApi.submit(teamId, quizId, answers),
+    // Cambian mis intentos y mi mejor nota.
+    onSuccess: () => client.invalidateQueries({ queryKey: queries.quizzes(teamId).queryKey }),
   });
 }

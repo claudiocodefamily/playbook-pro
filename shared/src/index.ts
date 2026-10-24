@@ -5,3 +5,5 @@ export * from './ids.js';
 export * from './diagram/diagram.schema.js';
 export * from './diagram/migrations.js';
 export * from './diagram/operations.js';
+export * from './quiz/quiz.schema.js';
+export * from './quiz/generate.js';
