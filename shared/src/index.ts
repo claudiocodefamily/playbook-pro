@@ -7,3 +7,4 @@ export * from './diagram/migrations.js';
 export * from './diagram/operations.js';
 export * from './quiz/quiz.schema.js';
 export * from './quiz/generate.js';
+export * from './game-plan/game-plan.js';

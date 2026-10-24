@@ -1,4 +1,4 @@
-import { BookMarked, BookOpen, ListChecks, ShieldCheck, Users } from 'lucide-react';
+import { BookMarked, BookOpen, ClipboardList, ListChecks, ShieldCheck, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { NavLink } from 'react-router';
 import { useTeamRole } from '../hooks/useTeamRole';
@@ -8,13 +8,14 @@ const TABS = [
   { to: '', label: 'Playbooks', icon: BookOpen, players: true },
   { to: 'roster', label: 'Roster', icon: Users, players: false },
   { to: 'glossary', label: 'Glosario', icon: BookMarked, players: true },
+  { to: 'game-plans', label: 'Game plans', icon: ClipboardList, players: true },
   { to: 'quizzes', label: 'Quizzes', icon: ListChecks, players: true },
   { to: 'coaches', label: 'Coaches', icon: ShieldCheck, players: false },
 ] as const;
 
 /**
- * Pestañas del equipo: sus playbooks, su roster, su glosario, sus quizzes y sus coaches.
- * Un jugador solo ve los playbooks, el glosario y los quizzes.
+ * Pestañas del equipo: playbooks, roster, glosario, game plans, quizzes y coaches. Un
+ * jugador no ve el roster ni los coaches.
  */
 export function TeamNav({ teamId }: { teamId: string }) {
   const { isPlayer } = useTeamRole(teamId);

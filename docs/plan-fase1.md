@@ -964,9 +964,17 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - El jugador responde una pregunta por pantalla. Al enviar, el servidor corrige (la respuesta correcta nunca llega antes al jugador), guarda el intento en `quiz_attempts` y devuelve la nota con la corrección. Se puede repetir; la lista muestra la mejor nota.
 - 7b-2 (hecho): en la página del quiz, el coach ve "Resultados": cada jugador con cuenta con su mejor nota, su último intento y cuántas veces lo hizo (los que no lo respondieron también aparecen). Cada pregunta muestra cuántos la aciertan en su último intento y se marca "para repasar" si falla más de la mitad (`GET /teams/:teamId/quizzes/:quizId/results`). Los intentos del coach al probarlo no cuentan.
 
+**7c. Game plan** (primera parte hecha: game plans y situaciones):
+
+- Pestaña "Game plans": uno por partido, con rival y día (`gameDate` como "AAAA-MM-DD", sin hora para que no cambie con la zona horaria). Colección `game_plans`.
+- Nace con las situaciones típicas (`DEFAULT_GAME_PLAN_SITUATIONS` en `shared`): 1st & 10, 3rd & corto/medio/largo, red zone, goal line, 2 minutos y backed up. El coach las renombra, quita o añade (máximo 16) y en cada una pone jugadas de cualquier playbook, en orden (máximo 30).
+- Las jugadas se guardan por id: si se editan, el game plan ve la versión nueva; si se borran, desaparecen de él. El PATCH sustituye todas las situaciones y comprueba que las jugadas existen y son del equipo.
+- Nace oculto a los jugadores. Publicado, el jugador solo ve las situaciones con jugadas y solo las jugadas de playbooks visibles para jugadores.
+- Falta 7c-2: el call sheet en PDF.
+
 **Sigue**
 
-- 7c: game plan.
+- 7c-2: call sheet imprimible en PDF.
 
 **Decisiones pendientes**
 

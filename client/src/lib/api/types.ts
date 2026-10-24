@@ -231,3 +231,34 @@ export interface QuizResults {
   /** Aciertos de cada pregunta en el último intento de cada jugador. */
   questions: { questionId: string; answered: number; correct: number }[];
 }
+
+export interface GamePlanSummary {
+  id: string;
+  teamId: string;
+  opponent: string;
+  /** Solo el día: "2026-11-07". */
+  gameDate: string | null;
+  playCount: number;
+  visibleToPlayers: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GamePlanSituation {
+  id: string;
+  name: string;
+  /** Jugadas, en orden. */
+  playIds: string[];
+}
+
+export interface GamePlanPlay {
+  id: string;
+  name: string;
+  playbookId: string;
+  playbookName: string;
+}
+
+export interface GamePlan extends GamePlanSummary {
+  situations: GamePlanSituation[];
+  plays: GamePlanPlay[];
+}

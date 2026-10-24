@@ -4,6 +4,8 @@ import {
   type ConceptInput,
   conceptsApi,
   formationsApi,
+  type GamePlanInput,
+  gamePlansApi,
   playbooksApi,
   playerAccountsApi,
   type PlayFilters,
@@ -16,7 +18,7 @@ import {
   teamsApi,
   type TextQuestionInput,
 } from './endpoints';
-import type { Quiz } from './types';
+import type { GamePlan, Quiz } from './types';
 
 /**
  * Claves y consultas de TanStack Query. Guarda en caché lo que ya se cargó, así volver
@@ -69,6 +71,16 @@ export const queries = {
       queryFn: () => quizzesApi.results(teamId, quizId),
       // Los jugadores responden desde su móvil: se vuelve a pedir al abrir la pantalla.
       staleTime: 0,
+    }),
+  gamePlans: (teamId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'game-plans'],
+      queryFn: () => gamePlansApi.list(teamId),
+    }),
+  gamePlan: (teamId: string, planId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'game-plans', planId],
+      queryFn: () => gamePlansApi.get(teamId, planId),
     }),
   invite: (token: string) =>
     queryOptions({
@@ -396,5 +408,55 @@ export function useSubmitQuiz(teamId: string, quizId: string) {
       quizzesApi.submit(teamId, quizId, answers),
     // Cambian mis intentos y mi mejor nota.
     onSuccess: () => client.invalidateQueries({ queryKey: queries.quizzes(teamId).queryKey }),
+  });
+}
+
+/** Guarda el game plan que devuelve el servidor y refresca el listado. */
+function useGamePlanSaved(teamId: string) {
+  const client = useQueryClient();
+  return (plan: GamePlan) => {
+    client.setQueryData(queries.gamePlan(teamId, plan.id).queryKey, plan);
+    void client.invalidateQueries({ queryKey: queries.gamePlans(teamId).queryKey, exact: true });
+  };
+}
+
+export function useCreateGamePlan(teamId: string) {
+  const saved = useGamePlanSaved(teamId);
+  return useMutation({
+    mutationFn: (input: Parameters<typeof gamePlansApi.create>[1]) =>
+      gamePlansApi.create(teamId, input),
+    onSuccess: saved,
+  });
+}
+
+/**
+ * Cambios del game plan. Se enseñan al momento (antes de que conteste el servidor) para
+ * que ordenar jugadas sea ágil; si el servidor dice que no, se vuelve a lo guardado.
+ */
+export function useUpdateGamePlan(teamId: string, planId: string) {
+  const client = useQueryClient();
+  const saved = useGamePlanSaved(teamId);
+  const key = queries.gamePlan(teamId, planId).queryKey;
+  return useMutation({
+    mutationFn: (input: Partial<GamePlanInput>) => gamePlansApi.update(teamId, planId, input),
+    onMutate: async (input) => {
+      await client.cancelQueries({ queryKey: key });
+      const previous = client.getQueryData(key);
+      if (previous) client.setQueryData(key, { ...previous, ...input });
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) client.setQueryData(key, context.previous);
+    },
+    onSuccess: saved,
+  });
+}
+
+export function useDeleteGamePlan(teamId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) => gamePlansApi.remove(teamId, planId),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: queries.gamePlans(teamId).queryKey, exact: true }),
   });
 }
