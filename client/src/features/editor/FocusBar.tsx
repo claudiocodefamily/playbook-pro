@@ -46,7 +46,7 @@ export function FocusBar({ large = false }: { large?: boolean }) {
           <select
             value={active ?? ''}
             onChange={(event) => setFocus(event.target.value || null)}
-            className="min-h-10 rounded-xl bg-white px-2 text-sm font-semibold text-slate-900"
+            className="min-h-10 rounded-xl bg-surface px-2 text-sm font-semibold text-slate-900 ring-1 ring-white/20"
           >
             <option value="">Todos</option>
             {sides.map((group) => (
