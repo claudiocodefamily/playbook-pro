@@ -232,6 +232,11 @@ export interface QuizResults {
   questions: { questionId: string; answered: number; correct: number }[];
 }
 
+/** Preguntas que saldrían de cada posición con tareas dibujadas en un playbook. */
+export interface QuizCoverage {
+  positions: { position: Position; questions: number }[];
+}
+
 export interface GamePlanSummary {
   id: string;
   teamId: string;

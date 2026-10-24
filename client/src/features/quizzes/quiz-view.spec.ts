@@ -4,6 +4,8 @@ import {
   needsReview,
   optionDiagram,
   optionLetter,
+  plannedQuestions,
+  positionChoices,
   questionWindow,
   rankPlayers,
   scoreText,
@@ -75,5 +77,44 @@ describe('quiz-view', () => {
     expect(needsReview({ answered: 4, correct: 1 })).toBe(true);
     expect(needsReview({ answered: 4, correct: 2 })).toBe(false);
     expect(needsReview({ answered: 0, correct: 0 })).toBe(false);
+  });
+});
+
+describe('positionChoices', () => {
+  it('muestra las de la unidad y añade las que tienen tareas aunque sean del otro lado', () => {
+    expect(
+      positionChoices('offense', [
+        { position: 'LB', questions: 1 },
+        { position: 'WR', questions: 3 },
+      ]),
+    ).toEqual([
+      { position: 'QB', questions: 0 },
+      { position: 'RB', questions: 0 },
+      { position: 'WR', questions: 3 },
+      { position: 'TE', questions: 0 },
+      { position: 'OL', questions: 0 },
+      { position: 'LB', questions: 1 },
+    ]);
+  });
+
+  it('sin el recuento todavía no sabe cuántas salen', () => {
+    expect(positionChoices('defense', undefined).map((choice) => choice.questions)).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+});
+
+describe('plannedQuestions', () => {
+  it('suma las posiciones elegidas, con el tope del quiz', () => {
+    const choices = positionChoices('offense', [
+      { position: 'WR', questions: 30 },
+      { position: 'TE', questions: 25 },
+    ]);
+    expect(plannedQuestions(choices, ['WR'])).toBe(30);
+    expect(plannedQuestions(choices, ['WR', 'TE'])).toBe(40);
+    expect(plannedQuestions(choices, [])).toBe(0);
   });
 });

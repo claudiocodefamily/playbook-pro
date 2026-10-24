@@ -147,6 +147,25 @@ describe('Quizzes (e2e)', () => {
       .expect(404);
   });
 
+  it('dice cuántas preguntas saldrían por posición, solo al coach', async () => {
+    const s = await setup();
+    const url = `${s.teamUrl}/quizzes/coverage?playbookId=${s.playbookId}`;
+
+    const coverage = await http().get(url).set(s.coach.auth).expect(200);
+    expect(coverage.body).toEqual({ positions: [{ position: 'WR', questions: 2 }] });
+
+    await http()
+      .get(`${s.teamUrl}/quizzes/coverage?playbookId=no-es-uuid`)
+      .set(s.coach.auth)
+      .expect(400);
+    await http()
+      .get(`${s.teamUrl}/quizzes/coverage?playbookId=${newId()}`)
+      .set(s.coach.auth)
+      .expect(404);
+    const player = await joinedPlayer(s);
+    await http().get(url).set(player.auth).expect(403);
+  });
+
   it('el coach añade y quita preguntas de texto', async () => {
     const s = await setup();
     const quiz = await createQuiz(s);

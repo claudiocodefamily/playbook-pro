@@ -65,6 +65,13 @@ export const queries = {
       queryKey: ['teams', teamId, 'quizzes', quizId],
       queryFn: () => quizzesApi.get(teamId, quizId),
     }),
+  quizCoverage: (teamId: string, playbookId: string) =>
+    queryOptions({
+      queryKey: ['teams', teamId, 'quizzes', 'coverage', playbookId],
+      queryFn: () => quizzesApi.coverage(teamId, playbookId),
+      // Las jugadas se dibujan en el editor: se vuelve a contar al abrir el formulario.
+      staleTime: 0,
+    }),
   quizResults: (teamId: string, quizId: string) =>
     queryOptions({
       queryKey: ['teams', teamId, 'quizzes', quizId, 'results'],

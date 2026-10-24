@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -32,6 +33,7 @@ import { TeamAccessGuard } from '../../common/guards/team-access.guard.js';
 import { ParseUuidPipe } from '../../common/pipes/parse-uuid.pipe.js';
 import { AddTextQuestionDto } from './dto/add-text-question.dto.js';
 import { CreateQuizDto } from './dto/create-quiz.dto.js';
+import { QuizCoverageQueryDto, QuizCoverageResponseDto } from './dto/quiz-coverage.dto.js';
 import {
   AttemptResultResponseDto,
   QuizResponseDto,
@@ -88,6 +90,20 @@ export class QuizzesController {
       quizzes.map((quiz) => quiz._id),
     );
     return quizzes.map((quiz) => QuizSummaryResponseDto.from(quiz, stats.get(quiz._id)));
+  }
+
+  // Antes de `:quizId`, para que "coverage" no se tome por el id de un quiz.
+  @Get('coverage')
+  @ApiOperation({
+    summary: 'Cuántas preguntas saldrían de cada posición con las jugadas de un playbook',
+    description: 'Para elegir posiciones con tareas dibujadas antes de crear el quiz.',
+  })
+  @ApiOkResponse({ type: QuizCoverageResponseDto })
+  coverage(
+    @Param('teamId', ParseUuidPipe) teamId: string,
+    @Query() query: QuizCoverageQueryDto,
+  ): Promise<QuizCoverageResponseDto> {
+    return this.quizzes.coverage(teamId, query.playbookId);
   }
 
   @Get(':quizId')
