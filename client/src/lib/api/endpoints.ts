@@ -8,6 +8,9 @@ import type {
   PlayerInvite,
   Concept,
   Formation,
+  GamePlan,
+  GamePlanSituation,
+  GamePlanSummary,
   Play,
   Playbook,
   PlaySummary,
@@ -293,4 +296,26 @@ export const quizzesApi = {
       method: 'POST',
       ...json({ answers }),
     }),
+};
+
+export interface GamePlanInput {
+  opponent: string;
+  gameDate: string | null;
+  visibleToPlayers: boolean;
+  situations: GamePlanSituation[];
+}
+
+export const gamePlansApi = {
+  list: (teamId: string) => api.request<GamePlanSummary[]>(`/teams/${teamId}/game-plans`),
+  get: (teamId: string, planId: string) =>
+    api.request<GamePlan>(`/teams/${teamId}/game-plans/${planId}`),
+  create: (teamId: string, input: { opponent: string; gameDate?: string | null }) =>
+    api.request<GamePlan>(`/teams/${teamId}/game-plans`, { method: 'POST', ...json(input) }),
+  update: (teamId: string, planId: string, input: Partial<GamePlanInput>) =>
+    api.request<GamePlan>(`/teams/${teamId}/game-plans/${planId}`, {
+      method: 'PATCH',
+      ...json(input),
+    }),
+  remove: (teamId: string, planId: string) =>
+    api.request<void>(`/teams/${teamId}/game-plans/${planId}`, { method: 'DELETE' }),
 };

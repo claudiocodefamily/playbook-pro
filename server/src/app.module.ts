@@ -5,6 +5,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { ConceptsModule } from './modules/concepts/concepts.module.js';
 import { FormationsModule } from './modules/formations/formations.module.js';
+import { GamePlansModule } from './modules/game-plans/game-plans.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PlaybooksModule } from './modules/playbooks/playbooks.module.js';
 import { PlaysModule } from './modules/plays/plays.module.js';
@@ -31,6 +32,7 @@ import { UsersModule } from './modules/users/users.module.js';
     ShareLinksModule,
     PlayerAccountsModule,
     QuizzesModule,
+    GamePlansModule,
     UploadsModule,
     HealthModule,
   ],
