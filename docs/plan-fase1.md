@@ -955,9 +955,18 @@ Cuando des el OK y conectes el repo, el primer PR del bloque 0 incluye `CLAUDE.m
 - La casilla "Incluir los dibujos del lápiz" (`showDrawings`) deja o quita los rayones.
 - El PDF usa jsPDF (`features/export/pdf.ts`), que se carga solo al exportar. Lo pueden usar coaches y jugadores, porque solo exporta lo que cada uno ya puede ver.
 
+**7b. Quizzes** (primera parte hecha: crear, responder y corregir):
+
+- El coach crea un quiz eligiendo un playbook y las posiciones (WR, LB...). Por cada jugador de esas posiciones con una tarea dibujada, la app genera la pregunta "¿Qué hace X en Mesh Right?" (`generateAssignmentQuestions` en `shared/src/quiz/generate.ts`).
+- Las opciones son dibujos: la tarea real, la misma en espejo y las tareas de otros jugadores del mismo lado puestas en su sitio. Se quitan el nombre de la ruta, las notas y los dibujos del lápiz, que darían la respuesta. Los jugadores con un marcaje (man) no entran, porque su tarea depende de a quién cubren.
+- El quiz guarda una copia de las preguntas (colección `quizzes`): si luego cambias la jugada, el quiz no cambia. Al leerlo, los diagrams copiados pasan por `migrateDiagram`.
+- El coach puede quitar preguntas, añadir preguntas escritas con respuestas de texto y publicarlo ("Oculto a jugadores / Publicado"). Nace oculto. Máximo 40 preguntas.
+- El jugador responde una pregunta por pantalla. Al enviar, el servidor corrige (la respuesta correcta nunca llega antes al jugador), guarda el intento en `quiz_attempts` y devuelve la nota con la corrección. Se puede repetir; la lista muestra la mejor nota.
+- Falta 7b-2: la pantalla de resultados del coach.
+
 **Sigue**
 
-- Fase 4: quizzes y game plan.
+- 7b-2: resultados de los quizzes para el coach. Después, 7c: game plan.
 
 **Decisiones pendientes**
 

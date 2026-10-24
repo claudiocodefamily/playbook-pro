@@ -1,6 +1,7 @@
-import type { PlayDiagram, PlaybookSide, Ruleset } from '@playbook/shared';
+import type { PlayDiagram, PlaybookSide, Position, Ruleset } from '@playbook/shared';
 import { api } from './client';
 import type {
+  AttemptResult,
   AuthResponse,
   InvitePreview,
   PlayerAccess,
@@ -12,6 +13,8 @@ import type {
   PlaySummary,
   PlayVersion,
   PlayVersionSummary,
+  Quiz,
+  QuizSummary,
   RosterPlayer,
   SharedPlaybook,
   ShareLink,
@@ -244,5 +247,47 @@ export const playerAccountsApi = {
   accept: (token: string) =>
     api.request<{ teamId: string }>(`/invites/${encodeURIComponent(token)}/accept`, {
       method: 'POST',
+    }),
+};
+
+export interface QuizInput {
+  title: string;
+  playbookId: string;
+  positions: Position[];
+  playIds?: string[];
+}
+
+export interface TextQuestionInput {
+  prompt: string;
+  options: string[];
+  /** Posición de la respuesta correcta en `options`. */
+  correctIndex: number;
+}
+
+export const quizzesApi = {
+  list: (teamId: string) => api.request<QuizSummary[]>(`/teams/${teamId}/quizzes`),
+  get: (teamId: string, quizId: string) => api.request<Quiz>(`/teams/${teamId}/quizzes/${quizId}`),
+  create: (teamId: string, input: QuizInput) =>
+    api.request<Quiz>(`/teams/${teamId}/quizzes`, { method: 'POST', ...json(input) }),
+  update: (
+    teamId: string,
+    quizId: string,
+    input: Partial<{ title: string; visibleToPlayers: boolean }>,
+  ) => api.request<Quiz>(`/teams/${teamId}/quizzes/${quizId}`, { method: 'PATCH', ...json(input) }),
+  remove: (teamId: string, quizId: string) =>
+    api.request<void>(`/teams/${teamId}/quizzes/${quizId}`, { method: 'DELETE' }),
+  addQuestion: (teamId: string, quizId: string, input: TextQuestionInput) =>
+    api.request<Quiz>(`/teams/${teamId}/quizzes/${quizId}/questions`, {
+      method: 'POST',
+      ...json(input),
+    }),
+  removeQuestion: (teamId: string, quizId: string, questionId: string) =>
+    api.request<Quiz>(`/teams/${teamId}/quizzes/${quizId}/questions/${questionId}`, {
+      method: 'DELETE',
+    }),
+  submit: (teamId: string, quizId: string, answers: { questionId: string; optionId: string }[]) =>
+    api.request<AttemptResult>(`/teams/${teamId}/quizzes/${quizId}/attempts`, {
+      method: 'POST',
+      ...json({ answers }),
     }),
 };

@@ -10,6 +10,7 @@ import { PlaybooksModule } from './modules/playbooks/playbooks.module.js';
 import { PlaysModule } from './modules/plays/plays.module.js';
 import { RosterModule } from './modules/roster/roster.module.js';
 import { PlayerAccountsModule } from './modules/player-accounts/player-accounts.module.js';
+import { QuizzesModule } from './modules/quizzes/quizzes.module.js';
 import { ShareLinksModule } from './modules/share-links/share-links.module.js';
 import { TeamsModule } from './modules/teams/teams.module.js';
 import { UploadsModule } from './modules/uploads/uploads.module.js';
@@ -29,6 +30,7 @@ import { UsersModule } from './modules/users/users.module.js';
     PlaysModule,
     ShareLinksModule,
     PlayerAccountsModule,
+    QuizzesModule,
     UploadsModule,
     HealthModule,
   ],

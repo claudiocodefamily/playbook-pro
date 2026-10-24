@@ -1,6 +1,7 @@
 import type {
   FormationSlot,
   PlayDiagram,
+  QuizQuestionView,
   PlaybookSide,
   Position,
   Ruleset,
@@ -178,4 +179,42 @@ export interface InvitePreview {
   playerName: string;
   number: number;
   expiresAt: string;
+}
+
+export interface QuizScore {
+  correct: number;
+  total: number;
+}
+
+export interface QuizSummary {
+  id: string;
+  teamId: string;
+  playbookId: string;
+  title: string;
+  questionCount: number;
+  /** Si los jugadores con cuenta pueden responderlo. */
+  visibleToPlayers: boolean;
+  /** Cuántas veces lo respondí yo. */
+  myAttempts: number;
+  myBest: QuizScore | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `correctOptionId` solo llega a los coaches. */
+export interface Quiz extends QuizSummary {
+  questions: QuizQuestionView[];
+}
+
+export interface AttemptResult {
+  id: string;
+  correct: number;
+  total: number;
+  results: {
+    questionId: string;
+    optionId: string | null;
+    correctOptionId: string;
+    isCorrect: boolean;
+  }[];
+  createdAt: string;
 }
